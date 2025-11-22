@@ -529,7 +529,7 @@ This project is part of academic research at ITA investigating Domain-Driven Des
 
 ### 📄 Publication
 
-**Paper:** [Guidelines for Designing Scalable Modular Monoliths: Supporting Long-term Evolution in Cloud-native Startups](https://www.scitepress.org/Papers/2025/137868/137868.pdf)  
+**Paper:** [Towards a Progressive Scalability for Modular Monolith Applications](https://www.scitepress.org/Papers/2025/137868/137868.pdf)  
 **Conference:** [WEBIST 2025](https://www.insticc.org/node/TechnicalProgram/webist/2025/presentationDetails/137868) - 20th International Conference on Web Information Systems and Technologies  
 **Publisher:** SCITEPRESS | **Year:** 2025 | **Paper ID:** 137868
 
