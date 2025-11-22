@@ -11,7 +11,7 @@ All future specs, plans, tasks, and code must comply with these rules.
 
 ## 1. Project Overview
 
-Tiny Store is an educational e-commerce backend built as a **modular monolith**.
+Tiny Store is a research e-commerce backend built as a **modular monolith**.
 
 It exists to demonstrate:
 
@@ -213,7 +213,7 @@ These domains are modeled as separate modules with clear boundaries inside a sin
 1. **Current Trade Offs**
 
    - A modular monolith is chosen for simplicity, speed of change, and ease of reasoning.
-   - An in process event bus is sufficient for the educational scope of the project.
+   - An in process event bus is sufficient for the research scope of the project.
    - A lightweight database is accepted for local development and testing.
 
 2. **When to Revisit Decisions**
