@@ -1,0 +1,46 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "allowJs": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": false,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/lib/*": ["./src/app/lib/*"],
+      "@tiny-store/shared-domain": ["../../libs/shared/domain/src/index.ts"],
+      "@tiny-store/shared-infrastructure": ["../../libs/shared/infrastructure/src/index.ts"],
+      "@tiny-store/modules-inventory": ["../../libs/modules/inventory/src/index.ts"],
+      "@tiny-store/modules-orders": ["../../libs/modules/orders/src/index.ts"],
+      "@tiny-store/modules-payments": ["../../libs/modules/payments/src/index.ts"],
+      "@tiny-store/modules-shipments": ["../../libs/modules/shipments/src/index.ts"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx",
+    ".next/types/**/*.ts",
+    "../../dist/apps/api/.next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "jest.config.ts",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
+}
+
