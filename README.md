@@ -510,51 +510,11 @@ MIT
 
 ## Contributing
 
-We welcome contributions! This is a research project focused on demonstrating best practices in modular monolith architecture, Domain-Driven Design, and event-driven systems. Your contributions help advance the understanding of these architectural patterns.
-
-### 🤝 How to Contribute
-
-**Ways you can contribute:**
-
-1. **🐛 Report Bugs** - Found an issue? Open an issue with detailed information
-2. **💡 Suggest Features** - Have ideas for improvements? Share them!
-3. **📝 Improve Documentation** - Help make the docs clearer and more comprehensive
-4. **🧪 Add Tests** - Increase test coverage or add new test scenarios
-5. **🔧 Code Contributions** - Submit pull requests for bug fixes or enhancements
-6. **📚 Share Knowledge** - Write blog posts, tutorials, or examples using this project
-
-### 🚀 Getting Started
-
-1. **Fork the repository** and clone your fork
-2. **Create a branch** for your contribution (`git checkout -b feature/amazing-feature`)
-3. **Make your changes** following the project's architecture patterns
-4. **Run tests** to ensure everything works (`npm test`)
-5. **Commit your changes** with clear, descriptive messages
-6. **Push to your fork** and open a Pull Request
-
-### 📋 Contribution Guidelines
-
-- **Follow the architecture** - Maintain module boundaries and event-driven communication
-- **Write tests** - New features should include appropriate tests
-- **Update documentation** - Keep docs in sync with code changes
-- **Respect boundaries** - Don't break module isolation rules
-- **Be descriptive** - Clear commit messages and PR descriptions help reviewers
-
-### 🎯 Areas for Contribution
-
-- **Performance improvements** - Optimize event handling or database queries
-- **Additional bounded contexts** - Implement new modules following the existing patterns
-- **Testing utilities** - Enhance test helpers and fixtures
-- **Documentation** - Improve guides, add examples, or clarify concepts
-- **Code quality** - Refactoring, type safety improvements, or linting fixes
-
-### 📖 Research Context
-
-This project is part of academic research. If you're contributing code or ideas that relate to the research objectives, please reference the [academic section](#-academic-research-context) and consider citing the published paper if you use this work in your own research.
+We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on how to contribute to this research project.
 
 ### ❓ Questions?
 
-Feel free to open an issue with questions or reach out to discuss ideas before implementing major changes.
+For questions or to discuss ideas, please open an issue or contact **Maurício Carvalho** at [mauriciocarvalho@ita.br](mailto:mauriciocarvalho@ita.br).
 
 ---
 
@@ -574,56 +534,30 @@ Feel free to open an issue with questions or reach out to discuss ideas before i
   *Distributed Systems and Software Engineering*
 </div>
 
----
-
-This project is part of academic research investigating the practical application of Domain-Driven Design (DDD) patterns and modular monolith architectures in event-driven systems. The work explores how to maintain strong module boundaries while achieving the benefits of event-driven communication within a monolithic architecture.
+This project is part of academic research at ITA investigating Domain-Driven Design (DDD) patterns and modular monolith architectures for cloud-native applications. This codebase serves as a practical demonstration of the guidelines proposed in the research paper.
 
 ### 📄 Publication
 
-This research has been published and presented at:
-
+**Paper:** [Guidelines for Designing Scalable Modular Monoliths: Supporting Long-term Evolution in Cloud-native Startups](https://www.scitepress.org/Papers/2025/137868/137868.pdf)  
 **Conference:** [WEBIST 2025](https://www.insticc.org/node/TechnicalProgram/webist/2025/presentationDetails/137868) - 20th International Conference on Web Information Systems and Technologies  
-**Paper ID:** 137868  
-**Publisher:** SCITEPRESS - Science and Technology Publications  
-**Year:** 2025  
-**Organized by:** INSTICC - Institute for Systems and Technologies of Information, Control and Communication
+**Publisher:** SCITEPRESS | **Year:** 2025 | **Paper ID:** 137868
 
 **Authors:**
-- **Maurício Carvalho** - Department of Computing Science, Instituto Tecnológico de Aeronáutica (ITA), São José dos Campos, Brazil
-- **Juliana de Melo Bezerra** - Department of Computing Science, Instituto Tecnológico de Aeronáutica (ITA), São José dos Campos, Brazil
-- **Karla Donato Fook** - Department of Computing Science, Instituto Tecnológico de Aeronáutica (ITA), São José dos Campos, Brazil
+- **Maurício Carvalho** - Department of Computing Science, ITA, São José dos Campos, Brazil
+- **Juliana de Melo Bezerra** - Department of Computing Science, ITA, São José dos Campos, Brazil
+- **Karla Donato Fook** - Department of Computing Science, ITA, São José dos Campos, Brazil
 
-**Links:**
-- [Full Paper (PDF)](https://www.scitepress.org/Papers/2025/137868/137868.pdf)
-- [Conference Presentation Details](https://www.insticc.org/node/TechnicalProgram/webist/2025/presentationDetails/137868)
+**Research Advisors:**
+- **Prof. Juliana de Melo Bezerra, PhD** - Department of Computing Science, ITA
+- **Prof. Karla Donato Fook, PhD** - Department of Computing Science, ITA
 
 #### Abstract
 
-Cloud-native software startups face intense pressure from limited resources, high uncertainty, and the need for rapid validation. In this context, early architectural decisions have lasting effects on scalability, maintainability, and adaptability. Although microservices are often favored for their modularity, they introduce significant operational overhead and require organizational maturity that many startups lack. Traditional monoliths offer simplicity but tend to evolve into rigid, tightly coupled systems. When designed with disciplined modularity, modular monoliths can offer internal boundaries that support sustainable growth while avoiding the fragmentation and complexity of premature microservices adoption. The existing literature emphasizes microservices, leaving gaps in guidance for modular monoliths on topics like modularization, scalability, onboarding, and deployment. This paper proposes guidelines for designing scalable modular monoliths, maintaining architectural flexibility, and reducing complexity, thereby supporting long-term evolution under typical startup constraints. The initial category of guidelines is presented, and their intended structure is thoroughly outlined.
+Cloud-native software startups face intense pressure from limited resources, high uncertainty, and the need for rapid validation. Early architectural decisions have lasting effects on scalability, maintainability, and adaptability. Although microservices are often favored for their modularity, they introduce significant operational overhead and require organizational maturity that many startups lack. Traditional monoliths offer simplicity but tend to evolve into rigid, tightly coupled systems. When designed with disciplined modularity, modular monoliths can offer internal boundaries that support sustainable growth while avoiding the fragmentation and complexity of premature microservices adoption. This paper proposes guidelines for designing scalable modular monoliths, maintaining architectural flexibility, and reducing complexity, thereby supporting long-term evolution under typical startup constraints.
 
 **Keywords:** Software Engineering, Software Architecture, Cloud Computing, Modular Monolith, Microservices.
 
-### 👨‍🏫 Research Advisors
-
-This research was conducted under the guidance of:
-- **Prof. Juliana de Melo Bezerra, PhD** - Department of Computing Science, Instituto Tecnológico de Aeronáutica (ITA)
-- **Prof. Karla Donato Fook, PhD** - Department of Computing Science, Instituto Tecnológico de Aeronáutica (ITA)
-
-### 🎯 Research Objectives
-
-This research addresses the gap in literature regarding modular monoliths by proposing guidelines for:
-
-1. **Designing Scalable Modular Monoliths** - Establishing architectural patterns that support sustainable growth under startup constraints
-2. **Maintaining Architectural Flexibility** - Creating internal boundaries that enable future evolution without premature microservices adoption
-3. **Reducing Complexity** - Balancing modularity with operational simplicity to avoid the overhead of distributed systems
-4. **Supporting Long-term Evolution** - Providing guidance on modularization, scalability, onboarding, and deployment strategies
-5. **Practical Implementation** - Demonstrating real-world application through this codebase, which implements DDD patterns, event-driven architecture, and module boundary enforcement
-
-This codebase serves as a practical demonstration of the guidelines proposed in the research paper.
-
 ### 📚 Citation
-
-If you use this project or reference this research, please cite:
 
 ```bibtex
 @inproceedings{carvalho2025modular,
@@ -636,10 +570,3 @@ If you use this project or reference this research, please cite:
   url={https://www.scitepress.org/Papers/2025/137868/137868.pdf}
 }
 ```
-
-**Conference:** WEBIST 2025 - 20th International Conference on Web Information Systems and Technologies  
-**Organized by:** INSTICC - Institute for Systems and Technologies of Information, Control and Communication
-
-### 🏛️ About ITA
-
-The Instituto Tecnológico de Aeronáutica (ITA) is a prestigious Brazilian engineering institution affiliated with the Brazilian Air Force, specializing in aerospace and advanced engineering education and research.
