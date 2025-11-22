@@ -503,10 +503,6 @@ If building for production:
 - [ ] Monitoring and alerting
 - [ ] CI/CD pipeline
 
-## License
-
-MIT
-
 ## Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on how to contribute to this research project.
@@ -515,11 +511,7 @@ We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guideline
 
 For questions or to discuss ideas, please open an issue or contact **Maurício Carvalho** at [mauriciocarvalho@ita.br](mailto:mauriciocarvalho@ita.br).
 
----
-
-**Thank you for contributing! 🙏**
-
-**Built with ❤️ to demonstrate modular monolith architecture and DDD for cloud-native applications**
+**Built with ❤️ to demonstrate modular monolith architecture with DDD for cloud-native applications**
 
 ---
 
@@ -541,10 +533,8 @@ This project is part of academic research at ITA investigating Domain-Driven Des
 **Conference:** [WEBIST 2025](https://www.insticc.org/node/TechnicalProgram/webist/2025/presentationDetails/137868) - 20th International Conference on Web Information Systems and Technologies  
 **Publisher:** SCITEPRESS | **Year:** 2025 | **Paper ID:** 137868
 
-**Authors:**
+**Author:**
 - **Maurício Carvalho** - Department of Computing Science, ITA, São José dos Campos, Brazil
-- **Juliana de Melo Bezerra** - Department of Computing Science, ITA, São José dos Campos, Brazil
-- **Karla Donato Fook** - Department of Computing Science, ITA, São José dos Campos, Brazil
 
 **Research Advisors:**
 - **Prof. Juliana de Melo Bezerra, PhD** - Department of Computing Science, ITA
@@ -569,3 +559,6 @@ Cloud-native software startups face intense pressure from limited resources, hig
   url={https://www.scitepress.org/Papers/2025/137868/137868.pdf}
 }
 ```
+## License
+
+MIT
