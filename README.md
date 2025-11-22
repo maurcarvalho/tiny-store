@@ -7,7 +7,6 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.0-black)
 ![Tests](https://img.shields.io/badge/tests-310%2B-green.svg)
-![Research](https://img.shields.io/badge/research-WEBIST%202025-orange.svg)
 ![Architecture](https://img.shields.io/badge/architecture-Modular%20Monolith-purple.svg)
 
 A modular monolith demonstrating Domain-Driven Design, event-driven architecture, and clean separation of concerns for an e-commerce order management system.
