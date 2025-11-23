@@ -323,6 +323,81 @@ if (result.isSuccess()) {
 }
 ```
 
+## Anti-Patterns to Avoid
+
+When working with this modular monolith, avoid common mistakes that break architectural boundaries. Here's a key example:
+
+### ❌ Direct Infrastructure Access
+
+**WRONG** - Directly calling infrastructure services from domain modules:
+
+```typescript
+// ❌ WRONG - Directly calling mailing infrastructure from Order module
+import { EmailService } from '@tiny-store/shared-infrastructure';
+
+class OrderService {
+  constructor(
+    private emailService: EmailService  // Direct infrastructure dependency!
+  ) {}
+  
+  async confirmOrder(orderId: string) {
+    const order = await this.orderRepository.findById(orderId);
+    order.confirm();
+    await this.orderRepository.save(order);
+    
+    // Directly calling email infrastructure in Order module!
+    await this.emailService.send({
+      to: order.customerEmail,
+      subject: 'Order Confirmed',
+      body: `Your order ${order.id} has been confirmed.`
+    });
+  }
+}
+```
+
+**CORRECT** - Notifications module handles emails via events:
+
+```typescript
+// ✅ CORRECT - Notifications module handles emails via events
+import { EventBus } from '@tiny-store/shared-infrastructure';
+
+class OrderService {
+  constructor(
+    private eventBus: EventBus  // Events only!
+  ) {}
+  
+  async confirmOrder(orderId: string) {
+    const order = await this.orderRepository.findById(orderId);
+    order.confirm();
+    await this.orderRepository.save(order);
+    
+    // Publish event - notifications module will handle email
+    this.eventBus.publish(new OrderConfirmedEvent({
+      orderId: order.id,
+      customerEmail: order.customerEmail,
+      total: order.total
+    }));
+  }
+}
+
+// Notifications module listens and handles email
+class OrderConfirmedListener {
+  constructor(
+    private emailService: EmailService  // Infrastructure only in notifications module
+  ) {}
+  
+  async handle(event: OrderConfirmedEvent) {
+    await this.emailService.send({
+      to: event.customerEmail,
+      subject: 'Order Confirmed',
+      body: `Your order ${event.orderId} has been confirmed.`
+    });
+  }
+}
+```
+
+**See [docs/ANTI_PATTERNS.md](./docs/ANTI_PATTERNS.md) for a complete list of anti-patterns with detailed examples.**
+
 ## API Examples
 
 ### Create Product
@@ -505,7 +580,7 @@ If building for production:
 
 ## Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on how to contribute to this research project.
+We welcome contributions! See [CONTRIBUTING.md](./docs/CONTRIBUTING.md) for guidelines on how to contribute to this research project.
 
 ### ❓ Questions?
 
