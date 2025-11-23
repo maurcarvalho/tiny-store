@@ -626,7 +626,7 @@ Cloud-native software startups face intense pressure from limited resources, hig
 ```bibtex
 @inproceedings{carvalho2025modular,
   title={Guidelines for Designing Scalable Modular Monoliths: Supporting Long-term Evolution in Cloud-native Startups},
-  author={Carvalho, Maur{\'i}cio and Bezerra, Juliana de Melo and Fook, Karla Donato},
+  author={Carvalho, Mauricio and Bezerra, Juliana de Melo and Fook, Karla Donato},
   booktitle={Proceedings of the 20th International Conference on Web Information Systems and Technologies (WEBIST 2025)},
   year={2025},
   publisher={SCITEPRESS - Science and Technology Publications},
