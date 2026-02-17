@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/database';
-import { GetProductHandler, ProductRepository } from '@tiny-store/modules-inventory';
+import { GetProductHandler, UpdateProductStockHandler } from '@tiny-store/modules-inventory';
 import { handleError } from '@/lib/error-handler';
 
 export async function GET(
@@ -26,34 +26,22 @@ export async function PATCH(
   try {
     const dataSource = await getDatabase();
     const body = await request.json();
-    
-    const repository = new ProductRepository(dataSource);
-    const product = await repository.findBySku(params.sku);
-    
-    if (!product) {
+
+    if (typeof body.stockQuantity !== 'number') {
       return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
+        { error: 'stockQuantity is required' },
+        { status: 400 }
       );
     }
 
-    // Update stock quantity if provided
-    if (typeof body.stockQuantity === 'number') {
-      product.adjustStock(body.stockQuantity);
-      await repository.save(product);
-    }
-
-    return NextResponse.json({
-      productId: product.id,
-      sku: product.sku.value,
-      name: product.name,
-      stockQuantity: product.stockQuantity,
-      availableStock: product.availableStock,
-      reservedQuantity: product.reservedQuantity,
-      status: product.status,
+    const handler = new UpdateProductStockHandler(dataSource);
+    const result = await handler.handle({
+      sku: params.sku,
+      stockQuantity: body.stockQuantity,
     });
+
+    return NextResponse.json(result);
   } catch (error) {
     return handleError(error);
   }
 }
-

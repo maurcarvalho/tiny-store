@@ -24,9 +24,13 @@
       "@tiny-store/shared-infrastructure": ["libs/shared/infrastructure/src/index.ts"],
       "@tiny-store/shared-testing": ["libs/shared/testing/src/index.ts"],
       "@tiny-store/modules-inventory": ["libs/modules/inventory/src/index.ts"],
+      "@tiny-store/modules-inventory/internal": ["libs/modules/inventory/src/internal.ts"],
       "@tiny-store/modules-orders": ["libs/modules/orders/src/index.ts"],
+      "@tiny-store/modules-orders/internal": ["libs/modules/orders/src/internal.ts"],
       "@tiny-store/modules-payments": ["libs/modules/payments/src/index.ts"],
-      "@tiny-store/modules-shipments": ["libs/modules/shipments/src/index.ts"]
+      "@tiny-store/modules-payments/internal": ["libs/modules/payments/src/internal.ts"],
+      "@tiny-store/modules-shipments": ["libs/modules/shipments/src/index.ts"],
+      "@tiny-store/modules-shipments/internal": ["libs/modules/shipments/src/internal.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

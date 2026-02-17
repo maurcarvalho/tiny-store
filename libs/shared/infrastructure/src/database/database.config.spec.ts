@@ -1,10 +1,9 @@
 import { DataSource } from 'typeorm';
 import { createDatabaseConnection } from './database.config';
-import { ProductEntity } from '@tiny-store/modules-inventory';
-import { StockReservationEntity } from '@tiny-store/modules-inventory';
-import { OrderEntity } from '@tiny-store/modules-orders';
-import { PaymentEntity } from '@tiny-store/modules-payments';
-import { ShipmentEntity } from '@tiny-store/modules-shipments';
+import { ProductEntity, StockReservationEntity } from '@tiny-store/modules-inventory/internal';
+import { OrderEntity } from '@tiny-store/modules-orders/internal';
+import { PaymentEntity } from '@tiny-store/modules-payments/internal';
+import { ShipmentEntity } from '@tiny-store/modules-shipments/internal';
 import { EventStoreEntity } from '../event-store/event-store.entity';
 
 describe('Database Configuration - Entity Registration', () => {
