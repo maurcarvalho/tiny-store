@@ -9,99 +9,48 @@
  */
 
 describe('Module Boundary Violations', () => {
-  describe('Cross-Module Entity Access (SHOULD FAIL)', () => {
-    it('should NOT allow Orders module to directly import Inventory entities', () => {
-      // This test verifies that attempting to import an entity from another module
-      // is not possible through the public API
-      
-      let importFailed = false;
-      
-      try {
-        // Attempt to import Product entity from inventory module
-        // This should fail because Product is not exported in the public API
-        const inventory = require('@tiny-store/modules-inventory');
-        const Product = inventory.Product;
-        
-        // If we get here, the boundary is violated
-        importFailed = false;
-      } catch (error) {
-        // Expected: the import should fail
-        importFailed = true;
-      }
-      
-      expect(importFailed).toBe(true);
+  describe('Cross-Module Entity Access (SHOULD NOT BE EXPORTED)', () => {
+    it('should NOT export Inventory domain entities in public API', () => {
+      const inventory = require('@tiny-store/modules-inventory');
+      expect(inventory.Product).toBeUndefined();
+      expect(inventory.ProductEntity).toBeUndefined();
+      expect(inventory.StockReservation).toBeUndefined();
+      expect(inventory.StockReservationEntity).toBeUndefined();
     });
 
-    it('should NOT allow Payments module to directly access Order entities', () => {
-      let importFailed = false;
-      
-      try {
-        const orders = require('@tiny-store/modules-orders');
-        const Order = orders.Order;
-        importFailed = false;
-      } catch (error) {
-        importFailed = true;
-      }
-      
-      expect(importFailed).toBe(true);
+    it('should NOT export Order domain entities in public API', () => {
+      const orders = require('@tiny-store/modules-orders');
+      expect(orders.Order).toBeUndefined();
+      expect(orders.OrderEntity).toBeUndefined();
     });
 
-    it('should NOT allow Shipments module to directly access Payment entities', () => {
-      let importFailed = false;
-      
-      try {
-        const payments = require('@tiny-store/modules-payments');
-        const Payment = payments.Payment;
-        importFailed = false;
-      } catch (error) {
-        importFailed = true;
-      }
-      
-      expect(importFailed).toBe(true);
+    it('should NOT export Payment domain entities in public API', () => {
+      const payments = require('@tiny-store/modules-payments');
+      expect(payments.Payment).toBeUndefined();
+      expect(payments.PaymentEntity).toBeUndefined();
+    });
+
+    it('should NOT export Shipment domain entities in public API', () => {
+      const shipments = require('@tiny-store/modules-shipments');
+      expect(shipments.Shipment).toBeUndefined();
+      expect(shipments.ShipmentEntity).toBeUndefined();
     });
   });
 
-  describe('Cross-Module Repository Access (SHOULD FAIL)', () => {
-    it('should NOT allow Orders module to access ProductRepository', () => {
-      let importFailed = false;
-      
-      try {
-        const inventory = require('@tiny-store/modules-inventory');
-        const ProductRepository = inventory.ProductRepository;
-        importFailed = false;
-      } catch (error) {
-        importFailed = true;
-      }
-      
-      expect(importFailed).toBe(true);
+  describe('Cross-Module Repository Access (SHOULD NOT BE EXPORTED)', () => {
+    it('should NOT export ProductRepository in public API', () => {
+      const inventory = require('@tiny-store/modules-inventory');
+      expect(inventory.ProductRepository).toBeUndefined();
     });
 
-    it('should NOT allow Inventory module to access OrderRepository', () => {
-      let importFailed = false;
-      
-      try {
-        const orders = require('@tiny-store/modules-orders');
-        const OrderRepository = orders.OrderRepository;
-        importFailed = false;
-      } catch (error) {
-        importFailed = true;
-      }
-      
-      expect(importFailed).toBe(true);
+    it('should NOT export OrderRepository in public API', () => {
+      const orders = require('@tiny-store/modules-orders');
+      expect(orders.OrderRepository).toBeUndefined();
     });
 
-    it('should NOT allow Shipments module to access PaymentRepository', () => {
-      let importFailed = false;
-      
-      try {
-        const payments = require('@tiny-store/modules-payments');
-        const PaymentRepository = payments.PaymentRepository;
-        importFailed = false;
-      } catch (error) {
-        importFailed = true;
-      }
-      
-      expect(importFailed).toBe(true);
+    it('should NOT export PaymentRepository in public API', () => {
+      const payments = require('@tiny-store/modules-payments');
+      expect(payments.PaymentRepository).toBeUndefined();
     });
   });
 
