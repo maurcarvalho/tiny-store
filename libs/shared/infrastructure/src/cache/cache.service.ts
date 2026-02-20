@@ -1,15 +1,22 @@
 /**
  * CacheService — Module-namespaced caching with in-memory fallback.
  *
- * In production, swap the in-memory store for an ioredis-backed adapter.
- * For dev/test, the default in-memory implementation requires no Redis.
+ * Supports both in-memory (default) and Redis-backed (ioredis) adapters.
  */
+
+import Redis from 'ioredis';
 
 interface CacheAdapter {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, ttlSeconds?: number): Promise<void>;
   del(keys: string[]): Promise<void>;
   keys(pattern: string): Promise<string[]>;
+  close?(): Promise<void>;
+}
+
+interface CacheServiceConfig {
+  adapter: 'memory' | 'redis';
+  redis?: { host: string; port: number };
 }
 
 class InMemoryCacheAdapter implements CacheAdapter {
@@ -43,7 +50,6 @@ class InMemoryCacheAdapter implements CacheAdapter {
       '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$'
     );
     return Array.from(this.store.keys()).filter((k) => {
-      // Also prune expired entries
       const entry = this.store.get(k)!;
       if (entry.expiresAt && Date.now() > entry.expiresAt) {
         this.store.delete(k);
@@ -59,6 +65,44 @@ class InMemoryCacheAdapter implements CacheAdapter {
   }
 }
 
+class RedisCacheAdapter implements CacheAdapter {
+  private client: Redis;
+
+  constructor(redis: { host: string; port: number }) {
+    this.client = new Redis({ host: redis.host, port: redis.port, maxRetriesPerRequest: null });
+  }
+
+  async get(key: string): Promise<string | null> {
+    return this.client.get(key);
+  }
+
+  async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
+    if (ttlSeconds) {
+      await this.client.set(key, value, 'EX', ttlSeconds);
+    } else {
+      await this.client.set(key, value);
+    }
+  }
+
+  async del(keys: string[]): Promise<void> {
+    if (keys.length > 0) {
+      await this.client.del(...keys);
+    }
+  }
+
+  async keys(pattern: string): Promise<string[]> {
+    return this.client.keys(pattern);
+  }
+
+  async close(): Promise<void> {
+    this.client.disconnect();
+  }
+
+  getClient(): Redis {
+    return this.client;
+  }
+}
+
 class CacheService {
   private static instance: CacheService;
   private adapter: CacheAdapter;
@@ -69,8 +113,19 @@ class CacheService {
     this.globalPrefix = globalPrefix;
   }
 
-  static getInstance(adapter?: CacheAdapter): CacheService {
+  static getInstance(configOrAdapter?: CacheAdapter | CacheServiceConfig): CacheService {
     if (!CacheService.instance) {
+      let adapter: CacheAdapter | undefined;
+      if (configOrAdapter && 'adapter' in configOrAdapter) {
+        const config = configOrAdapter as CacheServiceConfig;
+        if (config.adapter === 'redis') {
+          adapter = new RedisCacheAdapter(config.redis ?? { host: 'localhost', port: 6379 });
+        } else {
+          adapter = new InMemoryCacheAdapter();
+        }
+      } else if (configOrAdapter) {
+        adapter = configOrAdapter as CacheAdapter;
+      }
       CacheService.instance = new CacheService(adapter);
     }
     return CacheService.instance;
@@ -103,6 +158,12 @@ class CacheService {
       await this.adapter.del(keys);
     }
   }
+
+  async close(): Promise<void> {
+    if (this.adapter.close) {
+      await this.adapter.close();
+    }
+  }
 }
 
-export { CacheService, CacheAdapter, InMemoryCacheAdapter };
+export { CacheService, CacheAdapter, InMemoryCacheAdapter, RedisCacheAdapter, CacheServiceConfig };

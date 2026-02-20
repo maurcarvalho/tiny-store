@@ -2,9 +2,10 @@
  * QueueService — Module-scoped job queues with in-memory fallback.
  *
  * Queue names follow the convention `module:purpose`.
- * In production, swap for a BullMQ-backed adapter.
- * The default in-memory implementation requires no Redis.
+ * Supports both in-memory (default) and BullMQ-backed (Redis) adapters.
  */
+
+import { Queue as BullQueue, Worker as BullWorker, Job as BullJob, QueueEvents } from 'bullmq';
 
 interface JobOptions {
   attempts?: number;
@@ -23,6 +24,12 @@ type WorkerHandler<T = any> = (job: Job<T>) => Promise<void>;
 interface QueueAdapter {
   enqueue<T>(queue: string, data: T, options?: JobOptions): Promise<Job<T>>;
   registerWorker<T>(queue: string, handler: WorkerHandler<T>): void;
+  close?(): Promise<void>;
+}
+
+interface QueueServiceConfig {
+  adapter: 'memory' | 'bullmq';
+  redis?: { host: string; port: number };
 }
 
 class InMemoryQueueAdapter implements QueueAdapter {
@@ -39,7 +46,6 @@ class InMemoryQueueAdapter implements QueueAdapter {
     };
     this.jobs.push(job);
 
-    // Process immediately if a worker is registered (simulate async)
     const handler = this.workers.get(queue);
     if (handler) {
       setImmediate(async () => {
@@ -76,6 +82,99 @@ class InMemoryQueueAdapter implements QueueAdapter {
   }
 }
 
+class BullMQAdapter implements QueueAdapter {
+  private queues = new Map<string, BullQueue>();
+  private workers: BullWorker[] = [];
+  private queueEvents: QueueEvents[] = [];
+  private connection: { host: string; port: number };
+
+  constructor(redis: { host: string; port: number }) {
+    this.connection = redis;
+  }
+
+  /** BullMQ disallows ':' in queue names — use '.' as separator */
+  private sanitizeName(name: string): string {
+    return name.replace(/:/g, '.');
+  }
+
+  private getQueue(name: string): BullQueue {
+    const safeName = this.sanitizeName(name);
+    let q = this.queues.get(safeName);
+    if (!q) {
+      q = new BullQueue(safeName, { connection: { ...this.connection, maxRetriesPerRequest: null } });
+      this.queues.set(safeName, q);
+    }
+    return q;
+  }
+
+  async enqueue<T>(queue: string, data: T, options: JobOptions = {}): Promise<Job<T>> {
+    const q = this.getQueue(queue);
+    const bullOpts: any = {
+      attempts: options.attempts ?? 1,
+      removeOnComplete: true,
+      removeOnFail: false,
+    };
+    if (options.backoff) {
+      bullOpts.backoff = {
+        type: options.backoff.type,
+        delay: options.backoff.delay,
+      };
+    }
+    const bullJob = await q.add('job', data, bullOpts);
+    return {
+      id: bullJob.id!,
+      queue,
+      data,
+      options,
+    };
+  }
+
+  registerWorker<T>(queue: string, handler: WorkerHandler<T>): void {
+    const worker = new BullWorker(
+      this.sanitizeName(queue),
+      async (bullJob: BullJob) => {
+        const job: Job<T> = {
+          id: bullJob.id!,
+          queue,
+          data: bullJob.data as T,
+          options: {
+            attempts: bullJob.opts.attempts,
+            backoff: bullJob.opts.backoff as JobOptions['backoff'],
+          },
+        };
+        await handler(job);
+      },
+      { connection: { ...this.connection, maxRetriesPerRequest: null } }
+    );
+    this.workers.push(worker);
+  }
+
+  getQueueInstance(name: string): BullQueue {
+    return this.getQueue(name);
+  }
+
+  getQueueEvents(name: string): QueueEvents {
+    const qe = new QueueEvents(this.sanitizeName(name), { connection: { ...this.connection, maxRetriesPerRequest: null } });
+    this.queueEvents.push(qe);
+    return qe;
+  }
+
+  async close(): Promise<void> {
+    for (const w of this.workers) {
+      await w.close();
+    }
+    for (const qe of this.queueEvents) {
+      await qe.close();
+    }
+    for (const [, q] of this.queues) {
+      await q.close();
+    }
+    this.workers = [];
+    this.queueEvents = [];
+    this.queues.clear();
+  }
+}
+
 class QueueService {
   private static instance: QueueService;
   private adapter: QueueAdapter;
@@ -84,8 +183,19 @@ class QueueService {
     this.adapter = adapter ?? new InMemoryQueueAdapter();
   }
 
-  static getInstance(adapter?: QueueAdapter): QueueService {
+  static getInstance(configOrAdapter?: QueueAdapter | QueueServiceConfig): QueueService {
     if (!QueueService.instance) {
+      let adapter: QueueAdapter | undefined;
+      if (configOrAdapter && 'adapter' in configOrAdapter) {
+        const config = configOrAdapter as QueueServiceConfig;
+        if (config.adapter === 'bullmq') {
+          adapter = new BullMQAdapter(config.redis ?? { host: 'localhost', port: 6379 });
+        } else {
+          adapter = new InMemoryQueueAdapter();
+        }
+      } else if (configOrAdapter) {
+        adapter = configOrAdapter as QueueAdapter;
+      }
       QueueService.instance = new QueueService(adapter);
     }
     return QueueService.instance;
@@ -102,6 +212,16 @@ class QueueService {
   registerWorker<T>(queue: string, handler: WorkerHandler<T>): void {
     this.adapter.registerWorker(queue, handler);
   }
+
+  getAdapter(): QueueAdapter {
+    return this.adapter;
+  }
+
+  async close(): Promise<void> {
+    if (this.adapter.close) {
+      await this.adapter.close();
+    }
+  }
 }
 
-export { QueueService, QueueAdapter, InMemoryQueueAdapter, Job, JobOptions, WorkerHandler };
+export { QueueService, QueueAdapter, InMemoryQueueAdapter, BullMQAdapter, Job, JobOptions, WorkerHandler, QueueServiceConfig };
