@@ -1,9 +1,8 @@
 /**
  * Schema Isolation — Per-module PostgreSQL schema isolation.
  *
- * In production (PostgreSQL), each module gets its own schema (e.g. "orders", "inventory").
- * In dev/test (SQLite), schemas are not supported — the API degrades gracefully
- * and all entities share the same database (the current behaviour).
+ * Each module gets its own PostgreSQL schema (e.g. "orders", "inventory").
+ * This ensures clean separation between bounded contexts at the database level.
  */
 
 import { DataSource, DataSourceOptions } from 'typeorm';
@@ -15,12 +14,12 @@ type ModuleName = (typeof MODULE_SCHEMAS)[number];
 const moduleConnections = new Map<string, DataSource>();
 
 /**
- * Create PostgreSQL schemas for all modules. No-op for SQLite.
+ * Create PostgreSQL schemas for all modules.
+ * Guards against non-postgres drivers for safety.
  */
 async function createAllModuleSchemas(dataSource: DataSource): Promise<void> {
   const driver = dataSource.options.type;
   if (driver !== 'postgres') {
-    // SQLite (and other non-PG drivers) don't support schemas — skip gracefully.
     return;
   }
 
@@ -30,10 +29,10 @@ async function createAllModuleSchemas(dataSource: DataSource): Promise<void> {
 }
 
 /**
- * Get (or create and cache) a DataSource scoped to a specific module.
+ * Get (or create and cache) a DataSource scoped to a specific module's schema.
  *
- * For PostgreSQL, creates a new DataSource with the module's schema.
- * For SQLite, returns the base DataSource (single shared database).
+ * Creates a new DataSource with the module's PostgreSQL schema.
+ * Non-postgres drivers are returned as-is (safety fallback).
  */
 async function getModuleConnection(
   baseDataSource: DataSource,
@@ -50,7 +49,7 @@ async function getModuleConnection(
   const baseOptions = baseDataSource.options;
 
   if (baseOptions.type !== 'postgres') {
-    // SQLite — no schema support; return base DataSource as-is.
+    // Safety fallback for non-postgres drivers
     moduleConnections.set(cacheKey, baseDataSource);
     return baseDataSource;
   }

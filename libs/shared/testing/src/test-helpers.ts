@@ -4,24 +4,26 @@ import { randomUUID } from 'crypto';
 
 /**
  * Test Database Helper
- * Creates isolated database instances for each test
+ * Creates isolated database instances for each test using PostgreSQL
  */
 export class TestDatabase {
   private dataSource: DataSource | null = null;
 
   async setup(): Promise<DataSource> {
-    const dbName = `test-${randomUUID()}.db`;
-    
     this.dataSource = new DataSource({
-      type: 'sqlite',
-      database: path.join(process.cwd(), 'test-dbs', dbName),
+      type: 'postgres',
+      host: process.env['DB_HOST'] || 'localhost',
+      port: parseInt(process.env['DB_PORT'] || '5432'),
+      username: process.env['DB_USER'] || 'tinystore',
+      password: process.env['DB_PASSWORD'] || 'tinystore',
+      database: process.env['DB_NAME'] || 'tinystore',
       entities: [
         path.join(process.cwd(), 'libs/modules/**/*.entity.{ts,js}'),
         path.join(process.cwd(), 'libs/shared/**/*.entity.{ts,js}'),
       ],
       synchronize: true,
-      logging: false,
       dropSchema: true,
+      logging: false,
     });
 
     await this.dataSource.initialize();
