@@ -34,7 +34,6 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "reflect-metadata": "^0.1.13",
-    "sqlite3": "^5.1.6",
     "tslib": "^2.3.0",
     "typeorm": "^0.3.17",
     "uuid": "^9.0.0"

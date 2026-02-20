@@ -8,13 +8,13 @@ export class OrderEntity {
   @Column()
   customerId!: string;
 
-  @Column('simple-json')
+  @Column({ type: 'jsonb' })
   items!: Array<{ sku: string; quantity: number; unitPrice: number }>;
 
   @Column('decimal', { precision: 10, scale: 2 })
   totalAmount!: number;
 
-  @Column('simple-json')
+  @Column({ type: 'jsonb' })
   shippingAddress!: {
     street: string;
     city: string;

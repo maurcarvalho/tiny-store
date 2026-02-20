@@ -13,28 +13,39 @@ describe('Schema Isolation', () => {
     expect(MODULE_SCHEMAS).toContain('shipments');
   });
 
-  it('should return the base DataSource for SQLite (no schema)', async () => {
-    const ds = new DataSource({ type: 'sqlite', database: ':memory:' });
-    await ds.initialize();
-    const result = await getModuleConnection(ds, 'orders', []);
-    expect(result).toBe(ds);
-    await ds.destroy();
-  });
+  describe('PostgreSQL', () => {
+    let ds: DataSource;
 
-  it('should cache and return the same DataSource for repeated calls', async () => {
-    const ds = new DataSource({ type: 'sqlite', database: ':memory:' });
-    await ds.initialize();
-    const first = await getModuleConnection(ds, 'orders', []);
-    const second = await getModuleConnection(ds, 'orders', []);
-    expect(first).toBe(second);
-    await ds.destroy();
-  });
+    beforeAll(async () => {
+      ds = new DataSource({
+        type: 'postgres',
+        host: process.env['DB_HOST'] || 'localhost',
+        port: parseInt(process.env['DB_PORT'] || '5432'),
+        username: process.env['DB_USER'] || 'tinystore',
+        password: process.env['DB_PASSWORD'] || 'tinystore',
+        database: process.env['DB_NAME'] || 'tinystore',
+      });
+      await ds.initialize();
+    });
 
-  it('should no-op createAllModuleSchemas for SQLite', async () => {
-    const ds = new DataSource({ type: 'sqlite', database: ':memory:' });
-    await ds.initialize();
-    // Should not throw
-    await createAllModuleSchemas(ds);
-    await ds.destroy();
+    afterAll(async () => {
+      if (ds?.isInitialized) await ds.destroy();
+    });
+
+    it('should create all module schemas', async () => {
+      await createAllModuleSchemas(ds);
+      const result = await ds.query(
+        `SELECT schema_name FROM information_schema.schemata WHERE schema_name = ANY($1)`,
+        [['orders', 'inventory', 'payments', 'shipments']]
+      );
+      expect(result.length).toBe(4);
+    });
+
+    it('should cache and return the same DataSource for repeated calls', async () => {
+      const first = await getModuleConnection(ds, 'orders', []);
+      const second = await getModuleConnection(ds, 'orders', []);
+      expect(first).toBe(second);
+      if (first !== ds && first.isInitialized) await first.destroy();
+    });
   });
 });

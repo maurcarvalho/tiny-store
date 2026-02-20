@@ -14,7 +14,7 @@ export class PaymentEntity {
   @Column()
   status!: string;
 
-  @Column('simple-json')
+  @Column({ type: 'jsonb' })
   paymentMethod!: {
     type: string;
     details: string;

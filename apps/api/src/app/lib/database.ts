@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { createDatabaseConnection } from '@tiny-store/shared-infrastructure';
+import { createDatabaseConnection, createAllModuleSchemas } from '@tiny-store/shared-infrastructure';
 import { DataSource } from 'typeorm';
 
 let dataSource: DataSource | null = null;
@@ -7,7 +7,8 @@ let dataSource: DataSource | null = null;
 export async function getDatabase(): Promise<DataSource> {
   if (!dataSource) {
     dataSource = await createDatabaseConnection();
-    console.log('✅ Database connected');
+    await createAllModuleSchemas(dataSource);
+    console.log('✅ Database connected (module schemas created)');
   }
   
   return dataSource;

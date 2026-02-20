@@ -11,7 +11,7 @@ export class ShipmentEntity {
   @Column()
   trackingNumber!: string;
 
-  @Column('simple-json')
+  @Column({ type: 'jsonb' })
   shippingAddress!: {
     street: string;
     city: string;
