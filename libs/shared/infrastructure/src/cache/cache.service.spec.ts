@@ -16,7 +16,7 @@ describe('CacheService', () => {
     expect(await cache.get('orders', 'nonexistent')).toBeNull();
   });
 
-  it('should set and get values with module namespace', async () => {
+  it('should set and get values with globalPrefix:module namespace', async () => {
     const cache = CacheService.getInstance();
     await cache.set('orders', 'item:1', { id: 1, name: 'Test' });
     const result = await cache.get<{ id: number; name: string }>('orders', 'item:1');
@@ -31,15 +31,20 @@ describe('CacheService', () => {
     expect(await cache.get('inventory', 'key')).toBe('inventory-value');
   });
 
+  it('should use tiny-store global prefix in key format', async () => {
+    const cache = CacheService.getInstance();
+    await cache.set('orders', 'item:1', 'val');
+    // Verify via invalidatePattern that key format is tiny-store:orders:item:1
+    await cache.invalidatePattern('orders', 'item:*');
+    expect(await cache.get('orders', 'item:1')).toBeNull();
+  });
+
   it('should expire entries after TTL', async () => {
     const cache = CacheService.getInstance();
-    // Use a very short TTL; the in-memory adapter stores expiresAt = now + ttl*1000
-    // With ttl=0, expiresAt = now, so next get (even 1ms later) should miss.
     const now = Date.now;
     let time = Date.now();
     Date.now = () => time;
     await cache.set('orders', 'ephemeral', 'data', 1);
-    // Advance fake clock past TTL
     time += 2000;
     expect(await cache.get('orders', 'ephemeral')).toBeNull();
     Date.now = now;

@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import { DomainEvent } from '@tiny-store/shared-infrastructure';
 import { CreateShipmentHandler } from '../features/create-shipment/handler';
+import { enqueueLabelGeneration } from '../jobs/generate-label.job';
 
 export class OrderPaidListener {
   private handler: CreateShipmentHandler;
@@ -17,7 +18,12 @@ export class OrderPaidListener {
     // For this implementation, we'll log this limitation
     console.log(`OrderPaidListener: Creating shipment for order ${orderId}`);
     
-    // This will be handled properly in the API layer where we have access to order details
+    // Enqueue async label generation
+    await enqueueLabelGeneration({
+      shipmentId: `ship-${orderId}`,
+      orderId,
+      trackingNumber: `TN-${Date.now()}`,
+    });
   }
 }
 

@@ -11,6 +11,9 @@ import { DataSource, DataSourceOptions } from 'typeorm';
 const MODULE_SCHEMAS = ['orders', 'inventory', 'payments', 'shipments'] as const;
 type ModuleName = (typeof MODULE_SCHEMAS)[number];
 
+/** Cache of initialized DataSource instances per module */
+const moduleConnections = new Map<string, DataSource>();
+
 /**
  * Create PostgreSQL schemas for all modules. No-op for SQLite.
  */
@@ -27,28 +30,52 @@ async function createAllModuleSchemas(dataSource: DataSource): Promise<void> {
 }
 
 /**
- * Build DataSourceOptions scoped to a specific module schema.
+ * Get (or create and cache) a DataSource scoped to a specific module.
  *
- * For PostgreSQL, sets `schema` so all entities in this connection
- * live under the module's schema.
- * For SQLite, returns options unchanged (single shared database).
+ * For PostgreSQL, creates a new DataSource with the module's schema.
+ * For SQLite, returns the base DataSource (single shared database).
  */
-function getModuleConnection(
-  baseOptions: DataSourceOptions,
+async function getModuleConnection(
+  baseDataSource: DataSource,
   moduleName: ModuleName,
   entities: Function[]
-): DataSourceOptions {
-  const opts: DataSourceOptions = {
-    ...baseOptions,
-    entities,
-  } as DataSourceOptions;
+): Promise<DataSource> {
+  const cacheKey = `${moduleName}:${baseDataSource.options.database}`;
 
-  if (baseOptions.type === 'postgres') {
-    return { ...opts, schema: moduleName } as DataSourceOptions;
+  const cached = moduleConnections.get(cacheKey);
+  if (cached?.isInitialized) {
+    return cached;
   }
 
-  // SQLite — no schema support; return as-is.
-  return opts;
+  const baseOptions = baseDataSource.options;
+
+  if (baseOptions.type !== 'postgres') {
+    // SQLite — no schema support; return base DataSource as-is.
+    moduleConnections.set(cacheKey, baseDataSource);
+    return baseDataSource;
+  }
+
+  // PostgreSQL — create a schema-scoped DataSource
+  const moduleDs = new DataSource({
+    ...baseOptions,
+    entities,
+    schema: moduleName,
+    extra: {
+      ...(baseOptions as any).extra,
+      options: `-c search_path="${moduleName}",public`,
+    },
+  } as DataSourceOptions);
+
+  await moduleDs.initialize();
+  moduleConnections.set(cacheKey, moduleDs);
+  return moduleDs;
 }
 
-export { MODULE_SCHEMAS, ModuleName, createAllModuleSchemas, getModuleConnection };
+/**
+ * Clear the connection cache. For testing only.
+ */
+function clearModuleConnections(): void {
+  moduleConnections.clear();
+}
+
+export { MODULE_SCHEMAS, ModuleName, createAllModuleSchemas, getModuleConnection, clearModuleConnections, moduleConnections };

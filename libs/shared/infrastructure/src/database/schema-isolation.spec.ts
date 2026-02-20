@@ -1,7 +1,11 @@
-import { MODULE_SCHEMAS, ModuleName, getModuleConnection, createAllModuleSchemas } from './schema-isolation';
-import { DataSource, DataSourceOptions } from 'typeorm';
+import { MODULE_SCHEMAS, getModuleConnection, createAllModuleSchemas, clearModuleConnections } from './schema-isolation';
+import { DataSource } from 'typeorm';
 
 describe('Schema Isolation', () => {
+  beforeEach(() => {
+    clearModuleConnections();
+  });
+
   it('should export MODULE_SCHEMAS with expected modules', () => {
     expect(MODULE_SCHEMAS).toContain('orders');
     expect(MODULE_SCHEMAS).toContain('inventory');
@@ -9,24 +13,21 @@ describe('Schema Isolation', () => {
     expect(MODULE_SCHEMAS).toContain('shipments');
   });
 
-  it('should return SQLite options unchanged (no schema)', () => {
-    const base: DataSourceOptions = {
-      type: 'sqlite',
-      database: ':memory:',
-    };
-    const result = getModuleConnection(base, 'orders', []);
-    expect(result.type).toBe('sqlite');
-    expect((result as any).schema).toBeUndefined();
+  it('should return the base DataSource for SQLite (no schema)', async () => {
+    const ds = new DataSource({ type: 'sqlite', database: ':memory:' });
+    await ds.initialize();
+    const result = await getModuleConnection(ds, 'orders', []);
+    expect(result).toBe(ds);
+    await ds.destroy();
   });
 
-  it('should set schema for PostgreSQL options', () => {
-    const base: DataSourceOptions = {
-      type: 'postgres',
-      host: 'localhost',
-      database: 'test',
-    } as DataSourceOptions;
-    const result = getModuleConnection(base, 'orders', []);
-    expect((result as any).schema).toBe('orders');
+  it('should cache and return the same DataSource for repeated calls', async () => {
+    const ds = new DataSource({ type: 'sqlite', database: ':memory:' });
+    await ds.initialize();
+    const first = await getModuleConnection(ds, 'orders', []);
+    const second = await getModuleConnection(ds, 'orders', []);
+    expect(first).toBe(second);
+    await ds.destroy();
   });
 
   it('should no-op createAllModuleSchemas for SQLite', async () => {

@@ -62,9 +62,11 @@ class InMemoryCacheAdapter implements CacheAdapter {
 class CacheService {
   private static instance: CacheService;
   private adapter: CacheAdapter;
+  private globalPrefix: string;
 
-  private constructor(adapter?: CacheAdapter) {
+  private constructor(adapter?: CacheAdapter, globalPrefix = 'tiny-store') {
     this.adapter = adapter ?? new InMemoryCacheAdapter();
+    this.globalPrefix = globalPrefix;
   }
 
   static getInstance(adapter?: CacheAdapter): CacheService {
@@ -79,23 +81,23 @@ class CacheService {
     CacheService.instance = undefined as any;
   }
 
-  private namespaced(module: string, key: string): string {
-    return `${module}:${key}`;
+  private buildKey(module: string, key: string): string {
+    return `${this.globalPrefix}:${module}:${key}`;
   }
 
   async get<T>(module: string, key: string): Promise<T | null> {
-    const raw = await this.adapter.get(this.namespaced(module, key));
+    const raw = await this.adapter.get(this.buildKey(module, key));
     if (raw === null) return null;
     return JSON.parse(raw) as T;
   }
 
   async set<T>(module: string, key: string, value: T, ttlSeconds?: number): Promise<void> {
     const raw = JSON.stringify(value);
-    await this.adapter.set(this.namespaced(module, key), raw, ttlSeconds);
+    await this.adapter.set(this.buildKey(module, key), raw, ttlSeconds);
   }
 
   async invalidatePattern(module: string, pattern: string): Promise<void> {
-    const fullPattern = this.namespaced(module, pattern);
+    const fullPattern = this.buildKey(module, pattern);
     const keys = await this.adapter.keys(fullPattern);
     if (keys.length > 0) {
       await this.adapter.del(keys);

@@ -105,7 +105,7 @@ function checkVersionedEvents(mod: string): CheckResult {
   let withVersion = 0;
   for (const file of eventFiles) {
     const content = fs.readFileSync(path.join(eventsDir, file), 'utf-8');
-    if (/version/i.test(content)) withVersion++;
+    if (/version:\s*\d+/.test(content) || /version\s*=\s*\d+/.test(content)) withVersion++;
   }
   const ratio = eventFiles.length > 0 ? withVersion / eventFiles.length : 0;
   const score = Math.round(ratio * 20);

@@ -22,6 +22,7 @@ import { ProcessPaymentHandler } from '@tiny-store/modules-payments';
 // Shipments
 import { OrderPaidListener } from '@tiny-store/modules-shipments';
 import { CreateShipmentHandler } from '@tiny-store/modules-shipments';
+import { registerLabelGenerationWorker } from '@tiny-store/modules-shipments';
 
 // Orders - for accessing order details
 import { GetOrderHandler } from '@tiny-store/modules-orders';
@@ -135,6 +136,9 @@ export function registerListeners(dataSource: DataSource): void {
       console.error('Error creating shipment for paid order:', error);
     }
   });
+
+  // Register queue workers
+  registerLabelGenerationWorker();
 
   console.log('✅ Event listeners registered');
 }
