@@ -12,3 +12,6 @@ export * from './domain/events/payment-failed.event';
 
 // Public API — Listeners
 export * from './listeners/order-confirmed.listener';
+
+// Public API — Jobs
+export * from './jobs/process-payment.job';

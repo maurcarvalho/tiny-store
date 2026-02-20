@@ -21,3 +21,6 @@ export * from './domain/events/inventory-released.event';
 export * from './listeners/order-placed.listener';
 export * from './listeners/order-cancelled.listener';
 export * from './listeners/order-payment-failed.listener';
+
+// Public API — Jobs
+export * from './jobs/stock-sync.job';
