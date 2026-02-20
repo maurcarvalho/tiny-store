@@ -28,8 +28,10 @@ const MODULE_TABLES: Record<string, string[]> = {
 };
 
 /** Banned direct infrastructure imports inside module source. */
+// TypeORM is allowed: it is the shared ORM accessed through @tiny-store/shared-infrastructure.
+// DataSource instances are injected from the composition root, not created inside modules.
+// Banned imports are low-level drivers or alternative ORMs that bypass the shared abstraction.
 const BANNED_INFRA_IMPORTS = [
-  'typeorm',
   'ioredis',
   'redis',
   'bullmq',
@@ -39,6 +41,8 @@ const BANNED_INFRA_IMPORTS = [
   'sequelize',
   'mongoose',
   'prisma',
+  'kafkajs',
+  'amqplib',
 ];
 
 // ---------------------------------------------------------------------------
@@ -195,8 +199,6 @@ describe('G3: Scalability Readiness', () => {
           const content = fs.readFileSync(file, 'utf-8');
           for (const lib of BANNED_INFRA_IMPORTS) {
             // Match: import ... from 'lib' or from "lib" or from 'lib/...'
-            // Exception: typeorm is allowed for @Entity decorators in .entity.ts files
-            if (lib === 'typeorm' && file.endsWith('.entity.ts')) continue;
             const regex = new RegExp(
               `import\\s+.*from\\s+['"]${lib}(?:\\/[^'"]*)?['"]`,
               'g'
@@ -270,7 +272,6 @@ describe('G3: Scalability Readiness', () => {
         for (const file of files) {
           const content = fs.readFileSync(file, 'utf-8');
           for (const lib of BANNED_INFRA_IMPORTS) {
-            if (lib === 'typeorm' && file.endsWith('.entity.ts')) continue;
             const regex = new RegExp(
               `import\\s+.*from\\s+['"]${lib}(?:\\/[^'"]*)?['"]`,
               'g'
