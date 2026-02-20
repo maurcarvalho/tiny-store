@@ -19,9 +19,16 @@ import { ShipmentCreatedListener } from '@tiny-store/modules-orders';
 import { OrderConfirmedListener } from '@tiny-store/modules-payments';
 import { ProcessPaymentHandler } from '@tiny-store/modules-payments';
 
+// Payments - Jobs
+import { registerPaymentProcessingWorker } from '@tiny-store/modules-payments';
+
+// Inventory - Jobs
+import { registerStockSyncWorker } from '@tiny-store/modules-inventory';
+
 // Shipments
 import { OrderPaidListener } from '@tiny-store/modules-shipments';
 import { CreateShipmentHandler } from '@tiny-store/modules-shipments';
+import { registerLabelGenerationWorker } from '@tiny-store/modules-shipments';
 
 // Orders - for accessing order details
 import { GetOrderHandler } from '@tiny-store/modules-orders';
@@ -134,6 +141,21 @@ export function registerListeners(dataSource: DataSource): void {
     } catch (error) {
       console.error('Error creating shipment for paid order:', error);
     }
+  });
+
+  // Register queue workers
+  registerLabelGenerationWorker();
+  registerPaymentProcessingWorker(async (data) => {
+    try {
+      await processPaymentHandler.handle(data);
+    } catch (error) {
+      console.error('Error processing payment via queue:', error);
+      throw error; // Re-throw to trigger retry
+    }
+  });
+  registerStockSyncWorker(async (data) => {
+    console.log(`[StockSync] Processing ${data.items.length} items from ${data.source}`);
+    // In production: iterate items and call UpdateProductStockHandler per SKU
   });
 
   console.log('✅ Event listeners registered');
