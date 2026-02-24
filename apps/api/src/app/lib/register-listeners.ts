@@ -3,131 +3,78 @@ import { DataSource } from 'typeorm';
 import { EventBus } from '@tiny-store/shared-infrastructure';
 import { EventStoreRepository } from '@tiny-store/shared-infrastructure';
 
-const EXTRACTED_MODULES = (process.env['EXTRACTED_MODULES'] || '')
-  .split(',')
-  .map((m) => m.trim().toLowerCase())
-  .filter(Boolean);
+// ── Extraction Configuration ────────────────────────────────
+// Modules listed in EXTRACTED_MODULES run as independent services
+// and are skipped during monolith listener registration.
+const EXTRACTED_MODULES = new Set(
+  (process.env['EXTRACTED_MODULES'] || '')
+    .split(',')
+    .map((m) => m.trim().toLowerCase())
+    .filter(Boolean)
+);
 
-function isExtracted(mod: string): boolean {
-  return EXTRACTED_MODULES.includes(mod);
-}
+// ── Per-Module Registration Functions ───────────────────────
+// Each module defines its own listener wiring. Adding a new module
+// means adding one function and one entry to MODULE_REGISTRARS.
 
-// Inventory
-import { OrderPlacedListener } from '@tiny-store/modules-inventory';
-import { OrderCancelledListener } from '@tiny-store/modules-inventory';
-import { OrderPaymentFailedListener } from '@tiny-store/modules-inventory';
+function registerInventoryListeners(dataSource: DataSource, eventBus: EventBus): void {
+  const { OrderPlacedListener } = require('@tiny-store/modules-inventory');
+  const { OrderCancelledListener } = require('@tiny-store/modules-inventory');
+  const { OrderPaymentFailedListener } = require('@tiny-store/modules-inventory');
+  const { registerStockSyncWorker } = require('@tiny-store/modules-inventory');
 
-// Orders
-import { InventoryReservedListener } from '@tiny-store/modules-orders';
-import { InventoryReservationFailedListener } from '@tiny-store/modules-orders';
-import { PaymentProcessedListener } from '@tiny-store/modules-orders';
-import { PaymentFailedListener } from '@tiny-store/modules-orders';
-import { ShipmentCreatedListener } from '@tiny-store/modules-orders';
-
-// Payments
-import { OrderConfirmedListener } from '@tiny-store/modules-payments';
-import { ProcessPaymentHandler } from '@tiny-store/modules-payments';
-
-// Payments - Jobs
-import { registerPaymentProcessingWorker } from '@tiny-store/modules-payments';
-
-// Inventory - Jobs
-import { registerStockSyncWorker } from '@tiny-store/modules-inventory';
-
-// Shipments
-import { OrderPaidListener } from '@tiny-store/modules-shipments';
-import { CreateShipmentHandler } from '@tiny-store/modules-shipments';
-import { registerLabelGenerationWorker } from '@tiny-store/modules-shipments';
-
-// Orders - for accessing order details
-import { GetOrderHandler } from '@tiny-store/modules-orders';
-
-export function registerListeners(dataSource: DataSource): void {
-  const eventBus = EventBus.getInstance();
-  const eventStoreRepository = new EventStoreRepository(dataSource);
-
-  // Store all events
-  eventBus.subscribe('OrderPlaced', async (event) => {
-    await eventStoreRepository.save(event);
-  });
-  eventBus.subscribe('OrderConfirmed', async (event) => {
-    await eventStoreRepository.save(event);
-  });
-  eventBus.subscribe('OrderRejected', async (event) => {
-    await eventStoreRepository.save(event);
-  });
-  eventBus.subscribe('OrderPaid', async (event) => {
-    await eventStoreRepository.save(event);
-  });
-  eventBus.subscribe('OrderPaymentFailed', async (event) => {
-    await eventStoreRepository.save(event);
-  });
-  eventBus.subscribe('OrderShipped', async (event) => {
-    await eventStoreRepository.save(event);
-  });
-  eventBus.subscribe('OrderCancelled', async (event) => {
-    await eventStoreRepository.save(event);
-  });
-  eventBus.subscribe('InventoryReserved', async (event) => {
-    await eventStoreRepository.save(event);
-  });
-  eventBus.subscribe('InventoryReservationFailed', async (event) => {
-    await eventStoreRepository.save(event);
-  });
-  eventBus.subscribe('InventoryReleased', async (event) => {
-    await eventStoreRepository.save(event);
-  });
-  eventBus.subscribe('PaymentProcessed', async (event) => {
-    await eventStoreRepository.save(event);
-  });
-  eventBus.subscribe('PaymentFailed', async (event) => {
-    await eventStoreRepository.save(event);
-  });
-  eventBus.subscribe('ShipmentCreated', async (event) => {
-    await eventStoreRepository.save(event);
-  });
-
-  // Inventory listeners
   const orderPlacedListener = new OrderPlacedListener(dataSource);
-  eventBus.subscribe('OrderPlaced', (event) => orderPlacedListener.handle(event));
+  eventBus.subscribe('OrderPlaced', (event: any) => orderPlacedListener.handle(event));
 
   const orderCancelledListener = new OrderCancelledListener(dataSource);
-  eventBus.subscribe('OrderCancelled', (event) => orderCancelledListener.handle(event));
+  eventBus.subscribe('OrderCancelled', (event: any) => orderCancelledListener.handle(event));
 
   const orderPaymentFailedListener = new OrderPaymentFailedListener(dataSource);
-  eventBus.subscribe('OrderPaymentFailed', (event) =>
+  eventBus.subscribe('OrderPaymentFailed', (event: any) =>
     orderPaymentFailedListener.handle(event)
   );
 
-  // Orders listeners (skipped when orders module is extracted)
-  if (!isExtracted('orders')) {
-    const inventoryReservedListener = new InventoryReservedListener(dataSource);
-    eventBus.subscribe('InventoryReserved', (event) =>
-      inventoryReservedListener.handle(event)
-    );
+  registerStockSyncWorker(async (data: any) => {
+    console.log(`[StockSync] Processing ${data.items.length} items from ${data.source}`);
+  });
+}
 
-    const inventoryReservationFailedListener = new InventoryReservationFailedListener(dataSource);
-    eventBus.subscribe('InventoryReservationFailed', (event) =>
-      inventoryReservationFailedListener.handle(event)
-    );
+function registerOrdersListeners(dataSource: DataSource, eventBus: EventBus): void {
+  const { InventoryReservedListener } = require('@tiny-store/modules-orders');
+  const { InventoryReservationFailedListener } = require('@tiny-store/modules-orders');
+  const { PaymentProcessedListener } = require('@tiny-store/modules-orders');
+  const { PaymentFailedListener } = require('@tiny-store/modules-orders');
+  const { ShipmentCreatedListener } = require('@tiny-store/modules-orders');
 
-    const paymentProcessedListener = new PaymentProcessedListener(dataSource);
-    eventBus.subscribe('PaymentProcessed', (event) => paymentProcessedListener.handle(event));
+  const inventoryReservedListener = new InventoryReservedListener(dataSource);
+  eventBus.subscribe('InventoryReserved', (event: any) =>
+    inventoryReservedListener.handle(event)
+  );
 
-    const paymentFailedListener = new PaymentFailedListener(dataSource);
-    eventBus.subscribe('PaymentFailed', (event) => paymentFailedListener.handle(event));
+  const inventoryReservationFailedListener = new InventoryReservationFailedListener(dataSource);
+  eventBus.subscribe('InventoryReservationFailed', (event: any) =>
+    inventoryReservationFailedListener.handle(event)
+  );
 
-    const shipmentCreatedListener = new ShipmentCreatedListener(dataSource);
-    eventBus.subscribe('ShipmentCreated', (event) => shipmentCreatedListener.handle(event));
-  } else {
-    console.log('⏭️  Orders listeners skipped (module extracted)');
-  }
+  const paymentProcessedListener = new PaymentProcessedListener(dataSource);
+  eventBus.subscribe('PaymentProcessed', (event: any) => paymentProcessedListener.handle(event));
 
-  // Payments listener (custom implementation to get order amount)
+  const paymentFailedListener = new PaymentFailedListener(dataSource);
+  eventBus.subscribe('PaymentFailed', (event: any) => paymentFailedListener.handle(event));
+
+  const shipmentCreatedListener = new ShipmentCreatedListener(dataSource);
+  eventBus.subscribe('ShipmentCreated', (event: any) => shipmentCreatedListener.handle(event));
+}
+
+function registerPaymentsListeners(dataSource: DataSource, eventBus: EventBus): void {
+  const { ProcessPaymentHandler } = require('@tiny-store/modules-payments');
+  const { registerPaymentProcessingWorker } = require('@tiny-store/modules-payments');
+  const { GetOrderHandler } = require('@tiny-store/modules-orders');
+
   const processPaymentHandler = new ProcessPaymentHandler(dataSource);
   const getOrderHandler = new GetOrderHandler(dataSource);
-  
-  eventBus.subscribe('OrderConfirmed', async (event) => {
+
+  eventBus.subscribe('OrderConfirmed', async (event: any) => {
     const { orderId } = event.payload;
     try {
       const order = await getOrderHandler.handle(orderId);
@@ -140,10 +87,25 @@ export function registerListeners(dataSource: DataSource): void {
     }
   });
 
-  // Shipments listener (custom implementation to get shipping address)
+  registerPaymentProcessingWorker(async (data: any) => {
+    try {
+      await processPaymentHandler.handle(data);
+    } catch (error) {
+      console.error('Error processing payment via queue:', error);
+      throw error;
+    }
+  });
+}
+
+function registerShipmentsListeners(dataSource: DataSource, eventBus: EventBus): void {
+  const { CreateShipmentHandler } = require('@tiny-store/modules-shipments');
+  const { registerLabelGenerationWorker } = require('@tiny-store/modules-shipments');
+  const { GetOrderHandler } = require('@tiny-store/modules-orders');
+
   const createShipmentHandler = new CreateShipmentHandler(dataSource);
-  
-  eventBus.subscribe('OrderPaid', async (event) => {
+  const getOrderHandler = new GetOrderHandler(dataSource);
+
+  eventBus.subscribe('OrderPaid', async (event: any) => {
     const { orderId } = event.payload;
     try {
       const order = await getOrderHandler.handle(orderId);
@@ -156,21 +118,49 @@ export function registerListeners(dataSource: DataSource): void {
     }
   });
 
-  // Register queue workers
   registerLabelGenerationWorker();
-  registerPaymentProcessingWorker(async (data) => {
-    try {
-      await processPaymentHandler.handle(data);
-    } catch (error) {
-      console.error('Error processing payment via queue:', error);
-      throw error; // Re-throw to trigger retry
-    }
-  });
-  registerStockSyncWorker(async (data) => {
-    console.log(`[StockSync] Processing ${data.items.length} items from ${data.source}`);
-    // In production: iterate items and call UpdateProductStockHandler per SKU
-  });
-
-  console.log('✅ Event listeners registered');
 }
 
+// ── Module Registry ─────────────────────────────────────────
+// Single place to add or remove modules. Extraction is controlled
+// entirely by the EXTRACTED_MODULES environment variable.
+const MODULE_REGISTRARS: Record<string, (ds: DataSource, eb: EventBus) => void> = {
+  inventory: registerInventoryListeners,
+  orders: registerOrdersListeners,
+  payments: registerPaymentsListeners,
+  shipments: registerShipmentsListeners,
+};
+
+// ── Event Store (always active) ─────────────────────────────
+const ALL_EVENTS = [
+  'OrderPlaced', 'OrderConfirmed', 'OrderRejected',
+  'OrderPaid', 'OrderPaymentFailed', 'OrderShipped', 'OrderCancelled',
+  'InventoryReserved', 'InventoryReservationFailed', 'InventoryReleased',
+  'PaymentProcessed', 'PaymentFailed', 'ShipmentCreated',
+];
+
+// ── Orchestrator ────────────────────────────────────────────
+export function registerListeners(dataSource: DataSource): void {
+  const eventBus = EventBus.getInstance();
+  const eventStoreRepository = new EventStoreRepository(dataSource);
+
+  // Event store captures all events regardless of extraction
+  for (const eventName of ALL_EVENTS) {
+    eventBus.subscribe(eventName, (event) => eventStoreRepository.save(event));
+  }
+
+  // Register each non-extracted module
+  for (const [moduleName, register] of Object.entries(MODULE_REGISTRARS)) {
+    if (EXTRACTED_MODULES.has(moduleName)) {
+      console.log(`⏭️  ${moduleName} listeners skipped (module extracted)`);
+      continue;
+    }
+    register(dataSource, eventBus);
+  }
+
+  if (EXTRACTED_MODULES.size > 0) {
+    console.log(`✅ Event listeners registered (extracted: ${[...EXTRACTED_MODULES].join(', ')})`);
+  } else {
+    console.log('✅ Event listeners registered');
+  }
+}
