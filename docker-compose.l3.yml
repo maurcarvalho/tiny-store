@@ -17,15 +17,16 @@
 #   docker compose -f docker-compose.l3.yml up
 
 services:
-  # ── Orders Worker (extracted) ─────────────────────────────
-  # Event-driven worker process. No HTTP API — the monolith
-  # (or an API gateway) continues to serve REST endpoints.
-  # Commands reach Orders through events; results propagate back.
-  orders-worker:
+  # ── Orders Service (fully independent) ────────────────────
+  # Own API, own database, own event listeners, own deployment.
+  orders-service:
     build:
       context: .
       dockerfile: apps/orders-service/Dockerfile
+    ports:
+      - '3001:3001'
     environment:
+      PORT: 3001
       DATABASE_URL: postgres://orders:orders@orders-db:5432/orders
       REDIS_HOST: redis
       REDIS_PORT: 6379
