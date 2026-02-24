@@ -54,6 +54,9 @@ services:
       retries: 5
 
   # ── Monolith (without Orders) ────────────────────────────
+  # EXTRACTED_MODULES tells the monolith to skip Orders listeners
+  # and reject /api/orders/* requests with 410 Gone.
+  # A reverse proxy would forward those to orders-service instead.
   monolith:
     build:
       context: .
@@ -67,6 +70,7 @@ services:
       REDIS_PORT: 6379
       QUEUE_ADAPTER: bullmq
       CACHE_ADAPTER: redis
+      EXTRACTED_MODULES: orders
     depends_on:
       main-db:
         condition: service_healthy

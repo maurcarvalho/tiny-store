@@ -3,6 +3,15 @@ import { DataSource } from 'typeorm';
 import { EventBus } from '@tiny-store/shared-infrastructure';
 import { EventStoreRepository } from '@tiny-store/shared-infrastructure';
 
+const EXTRACTED_MODULES = (process.env['EXTRACTED_MODULES'] || '')
+  .split(',')
+  .map((m) => m.trim().toLowerCase())
+  .filter(Boolean);
+
+function isExtracted(mod: string): boolean {
+  return EXTRACTED_MODULES.includes(mod);
+}
+
 // Inventory
 import { OrderPlacedListener } from '@tiny-store/modules-inventory';
 import { OrderCancelledListener } from '@tiny-store/modules-inventory';
@@ -90,25 +99,29 @@ export function registerListeners(dataSource: DataSource): void {
     orderPaymentFailedListener.handle(event)
   );
 
-  // Orders listeners
-  const inventoryReservedListener = new InventoryReservedListener(dataSource);
-  eventBus.subscribe('InventoryReserved', (event) =>
-    inventoryReservedListener.handle(event)
-  );
+  // Orders listeners (skipped when orders module is extracted)
+  if (!isExtracted('orders')) {
+    const inventoryReservedListener = new InventoryReservedListener(dataSource);
+    eventBus.subscribe('InventoryReserved', (event) =>
+      inventoryReservedListener.handle(event)
+    );
 
-  const inventoryReservationFailedListener = new InventoryReservationFailedListener(dataSource);
-  eventBus.subscribe('InventoryReservationFailed', (event) =>
-    inventoryReservationFailedListener.handle(event)
-  );
+    const inventoryReservationFailedListener = new InventoryReservationFailedListener(dataSource);
+    eventBus.subscribe('InventoryReservationFailed', (event) =>
+      inventoryReservationFailedListener.handle(event)
+    );
 
-  const paymentProcessedListener = new PaymentProcessedListener(dataSource);
-  eventBus.subscribe('PaymentProcessed', (event) => paymentProcessedListener.handle(event));
+    const paymentProcessedListener = new PaymentProcessedListener(dataSource);
+    eventBus.subscribe('PaymentProcessed', (event) => paymentProcessedListener.handle(event));
 
-  const paymentFailedListener = new PaymentFailedListener(dataSource);
-  eventBus.subscribe('PaymentFailed', (event) => paymentFailedListener.handle(event));
+    const paymentFailedListener = new PaymentFailedListener(dataSource);
+    eventBus.subscribe('PaymentFailed', (event) => paymentFailedListener.handle(event));
 
-  const shipmentCreatedListener = new ShipmentCreatedListener(dataSource);
-  eventBus.subscribe('ShipmentCreated', (event) => shipmentCreatedListener.handle(event));
+    const shipmentCreatedListener = new ShipmentCreatedListener(dataSource);
+    eventBus.subscribe('ShipmentCreated', (event) => shipmentCreatedListener.handle(event));
+  } else {
+    console.log('⏭️  Orders listeners skipped (module extracted)');
+  }
 
   // Payments listener (custom implementation to get order amount)
   const processPaymentHandler = new ProcessPaymentHandler(dataSource);
