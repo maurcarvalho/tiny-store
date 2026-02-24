@@ -1,17 +1,24 @@
 /**
- * Orders Service — L3 Selective Extraction Example
+ * Orders Worker — L3 Selective Extraction Example
  *
- * This standalone service demonstrates what extraction looks like
+ * This standalone process demonstrates what extraction looks like
  * when a module is ready for independent deployment. It uses the
  * EXACT same domain logic from libs/modules/orders/ — only the
  * infrastructure wiring (database, event bus) changes.
  *
+ * The worker connects to its own database and registers only the
+ * event listeners that the Orders module needs. It does NOT expose
+ * an HTTP API — the monolith (or an API gateway) continues to
+ * serve REST endpoints. Commands reach Orders through events;
+ * results propagate back through events.
+ *
+ * When an independent API surface is needed (separate team, SLA,
+ * or deployment cadence), an HTTP layer can be added on top of
+ * the same handlers without changing any domain logic.
+ *
  * Key observation: no domain code was duplicated or rewritten.
- * The handlers, services, entities, and value objects are identical
- * to the monolith. Extraction is a topology change, not a code change.
  */
 import 'reflect-metadata';
-import http from 'http';
 import { DataSource } from 'typeorm';
 import {
   createDatabaseConnection,
@@ -20,18 +27,12 @@ import {
   EventStoreRepository,
 } from '@tiny-store/shared-infrastructure';
 import {
-  PlaceOrderHandler,
-  ListOrdersHandler,
-  GetOrderHandler,
-  CancelOrderHandler,
   InventoryReservedListener,
   InventoryReservationFailedListener,
   PaymentProcessedListener,
   PaymentFailedListener,
   ShipmentCreatedListener,
 } from '@tiny-store/modules-orders';
-
-const PORT = parseInt(process.env['PORT'] || '3001', 10);
 
 async function bootstrap(): Promise<void> {
   // ── Database ──────────────────────────────────────────────
@@ -44,11 +45,11 @@ async function bootstrap(): Promise<void> {
   // ── Event Listeners ───────────────────────────────────────
   // Register ONLY the listeners that the Orders module needs.
   // In the monolith, all listeners are registered centrally.
-  // Here, each service registers its own subset.
+  // Here, the worker registers its own subset.
   const eventBus = EventBus.getInstance();
   const eventStore = new EventStoreRepository(dataSource);
 
-  // Persist all events this service handles
+  // Persist events this worker handles
   const orderEvents = [
     'OrderPlaced', 'OrderConfirmed', 'OrderRejected',
     'OrderPaid', 'OrderShipped', 'OrderCancelled',
@@ -76,100 +77,16 @@ async function bootstrap(): Promise<void> {
   eventBus.subscribe('ShipmentCreated', (e) => shipmentCreatedListener.handle(e));
 
   console.log('✅ Orders event listeners registered');
+  console.log('🚀 Orders worker running — listening for events');
 
-  // ── HTTP Server ───────────────────────────────────────────
-  // Minimal routing using Node's built-in http module.
-  // No framework dependency — the handlers ARE the business logic.
-  const placeOrderHandler = new PlaceOrderHandler(dataSource);
-  const listOrdersHandler = new ListOrdersHandler(dataSource);
-  const getOrderHandler = new GetOrderHandler(dataSource);
-  const cancelOrderHandler = new CancelOrderHandler(dataSource);
-
-  const server = http.createServer(async (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
-
-    try {
-      const url = new URL(req.url || '/', `http://localhost:${PORT}`);
-      const path = url.pathname;
-
-      // Health check
-      if (path === '/health' && req.method === 'GET') {
-        res.writeHead(200);
-        res.end(JSON.stringify({ status: 'ok', service: 'orders' }));
-        return;
-      }
-
-      // POST /orders — place an order
-      if (path === '/orders' && req.method === 'POST') {
-        const body = await readBody(req);
-        const result = await placeOrderHandler.handle(body);
-        res.writeHead(201);
-        res.end(JSON.stringify(result));
-        return;
-      }
-
-      // GET /orders — list orders
-      if (path === '/orders' && req.method === 'GET') {
-        const customerId = url.searchParams.get('customerId') || undefined;
-        const status = url.searchParams.get('status') || undefined;
-        const result = await listOrdersHandler.handle({ customerId, status });
-        res.writeHead(200);
-        res.end(JSON.stringify(result));
-        return;
-      }
-
-      // GET /orders/:id — get order
-      const getMatch = path.match(/^\/orders\/([^/]+)$/);
-      if (getMatch && req.method === 'GET') {
-        const result = await getOrderHandler.handle(getMatch[1]);
-        res.writeHead(200);
-        res.end(JSON.stringify(result));
-        return;
-      }
-
-      // POST /orders/:id/cancel — cancel order
-      const cancelMatch = path.match(/^\/orders\/([^/]+)\/cancel$/);
-      if (cancelMatch && req.method === 'POST') {
-        const body = await readBody(req);
-        const result = await cancelOrderHandler.handle({
-          orderId: cancelMatch[1],
-          reason: body.reason || 'Customer requested cancellation',
-        });
-        res.writeHead(200);
-        res.end(JSON.stringify(result));
-        return;
-      }
-
-      res.writeHead(404);
-      res.end(JSON.stringify({ error: 'Not found' }));
-    } catch (error: any) {
-      console.error('Request error:', error);
-      res.writeHead(error.statusCode || 500);
-      res.end(JSON.stringify({ error: error.message || 'Internal server error' }));
-    }
-  });
-
-  server.listen(PORT, () => {
-    console.log(`🚀 Orders service listening on port ${PORT}`);
-  });
-}
-
-function readBody(req: http.IncomingMessage): Promise<any> {
-  return new Promise((resolve, reject) => {
-    let data = '';
-    req.on('data', (chunk) => (data += chunk));
-    req.on('end', () => {
-      try {
-        resolve(data ? JSON.parse(data) : {});
-      } catch (e) {
-        reject(new Error('Invalid JSON body'));
-      }
-    });
-    req.on('error', reject);
+  // Keep the process alive
+  process.on('SIGTERM', () => {
+    console.log('Orders worker shutting down...');
+    process.exit(0);
   });
 }
 
 bootstrap().catch((err) => {
-  console.error('Failed to start Orders service:', err);
+  console.error('Failed to start Orders worker:', err);
   process.exit(1);
 });
