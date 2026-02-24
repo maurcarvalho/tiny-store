@@ -1,0 +1,106 @@
+# L3 Selective Extraction — Orders as Independent Service
+#
+# This configuration demonstrates extracting the Orders module
+# while the rest of the monolith continues running unchanged.
+#
+# What changed vs the monolith deployment:
+#   1. orders-db: dedicated PostgreSQL instance for Orders
+#   2. orders-service: standalone process serving Orders API
+#   3. monolith: continues serving inventory, payments, shipments
+#
+# What stayed the same:
+#   - All domain logic (handlers, services, entities, value objects)
+#   - Event contracts (OrderPlaced, InventoryReserved, etc.)
+#   - Redis infrastructure (cache + queues)
+#
+# Usage:
+#   docker compose -f docker-compose.l3.yml up
+
+services:
+  # ── Orders Service (extracted) ───────────────────────────
+  orders-service:
+    build:
+      context: .
+      dockerfile: apps/orders-service/Dockerfile
+    ports:
+      - '3001:3001'
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgres://orders:orders@orders-db:5432/orders
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      QUEUE_ADAPTER: bullmq
+      CACHE_ADAPTER: redis
+    depends_on:
+      orders-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Orders Database (dedicated instance) ─────────────────
+  orders-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: orders
+    volumes:
+      - orders-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U orders']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Monolith (without Orders) ────────────────────────────
+  monolith:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://tinystore:tinystore@main-db:5432/tinystore
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      QUEUE_ADAPTER: bullmq
+      CACHE_ADAPTER: redis
+    depends_on:
+      main-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Main Database (shared by remaining modules) ──────────
+  main-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tinystore
+      POSTGRES_USER: tinystore
+      POSTGRES_PASSWORD: tinystore
+    volumes:
+      - main-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tinystore']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Redis (shared infrastructure) ────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  orders-pg-data:
+  main-pg-data:
+  redis-data:

@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "../../dist/apps/orders-service",
+    "rootDir": "../..",
+    "declaration": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "../../libs/modules/orders/src/**/*.ts",
+    "../../libs/shared/domain/src/**/*.ts",
+    "../../libs/shared/infrastructure/src/**/*.ts"
+  ],
+  "exclude": [
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
+}
