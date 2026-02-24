@@ -15,7 +15,7 @@ const EXTRACTED_MODULES = new Set(
 
 // ── Per-Module Registration Functions ───────────────────────
 // Each module defines its own listener wiring. Adding a new module
-// means adding one function and one entry to MODULE_REGISTRARS.
+// means adding one function and one entry to MODULE_REGISTRY.
 
 function registerInventoryListeners(dataSource: DataSource, eventBus: EventBus): void {
   const { OrderPlacedListener } = require('@tiny-store/modules-inventory');
@@ -124,7 +124,7 @@ function registerShipmentsListeners(dataSource: DataSource, eventBus: EventBus):
 // ── Module Registry ─────────────────────────────────────────
 // Single place to add or remove modules. Extraction is controlled
 // entirely by the EXTRACTED_MODULES environment variable.
-const MODULE_REGISTRARS: Record<string, (ds: DataSource, eb: EventBus) => void> = {
+const MODULE_REGISTRY: Record<string, (ds: DataSource, eb: EventBus) => void> = {
   inventory: registerInventoryListeners,
   orders: registerOrdersListeners,
   payments: registerPaymentsListeners,
@@ -150,7 +150,7 @@ export function registerListeners(dataSource: DataSource): void {
   }
 
   // Register each non-extracted module
-  for (const [moduleName, register] of Object.entries(MODULE_REGISTRARS)) {
+  for (const [moduleName, register] of Object.entries(MODULE_REGISTRY)) {
     if (EXTRACTED_MODULES.has(moduleName)) {
       console.log(`⏭️  ${moduleName} listeners skipped (module extracted)`);
       continue;
