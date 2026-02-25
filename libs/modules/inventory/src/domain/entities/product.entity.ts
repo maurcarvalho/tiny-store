@@ -11,7 +11,7 @@ export class ProductEntity {
   @Column()
   name!: string;
 
-  @Column()
+  @Column({ default: 0 })
   stockQuantity!: number;
 
   @Column()
