@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { OrderRepository } from '../../domain/repositories/order.repository';
 import { NotFoundError } from '@tiny-store/shared-domain';
 import { GetOrderResponse } from './dto';
@@ -6,8 +6,8 @@ import { GetOrderResponse } from './dto';
 export class GetOrderService {
   private orderRepository: OrderRepository;
 
-  constructor(dataSource: DataSource) {
-    this.orderRepository = new OrderRepository(dataSource);
+  constructor(db: DrizzleDb) {
+    this.orderRepository = new OrderRepository(db);
   }
 
   async execute(orderId: string): Promise<GetOrderResponse> {

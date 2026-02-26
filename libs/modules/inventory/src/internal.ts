@@ -1,7 +1,5 @@
 /**
  * Internal exports — NOT part of the public API.
- * Used only by shared/infrastructure for TypeORM entity registration.
- * Do NOT import from this file in application code.
+ * Drizzle schema tables for use by shared/infrastructure.
  */
-export { ProductEntity } from './domain/entities/product.entity';
-export { StockReservationEntity } from './domain/entities/stock-reservation.entity';
+export { productsTable, stockReservationsTable } from './db/schema';

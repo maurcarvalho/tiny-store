@@ -8,21 +8,20 @@ export async function GET(
   { params }: { params: { eventId: string } }
 ) {
   try {
-    const dataSource = await getDatabase();
-    const eventStore = new EventStoreRepository(dataSource);
-    
+    const db = await getDatabase();
+    const eventStore = new EventStoreRepository(db);
+
     const event = await eventStore.findById(params.eventId);
-    
+
     if (!event) {
       return NextResponse.json(
         { error: 'Event not found' },
         { status: 404 }
       );
     }
-    
+
     return NextResponse.json({ event });
   } catch (error) {
     return handleError(error);
   }
 }
-

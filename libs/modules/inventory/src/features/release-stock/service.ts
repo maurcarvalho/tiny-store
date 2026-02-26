@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { ProductRepository } from '../../domain/repositories/product.repository';
 import { StockReservationRepository } from '../../domain/repositories/stock-reservation.repository';
 import { EventBus } from '@tiny-store/shared-infrastructure';
@@ -13,9 +13,9 @@ export class ReleaseStockService {
   private reservationRepository: StockReservationRepository;
   private eventBus: EventBus;
 
-  constructor(dataSource: DataSource) {
-    this.productRepository = new ProductRepository(dataSource);
-    this.reservationRepository = new StockReservationRepository(dataSource);
+  constructor(db: DrizzleDb) {
+    this.productRepository = new ProductRepository(db);
+    this.reservationRepository = new StockReservationRepository(db);
     this.eventBus = EventBus.getInstance();
   }
 

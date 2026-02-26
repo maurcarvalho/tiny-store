@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { PaymentRepository } from '../../domain/repositories/payment.repository';
 import { Payment } from '../../domain/entities/payment';
 import { PaymentMethod } from '../../domain/value-objects/payment-method.value-object';
@@ -20,8 +20,8 @@ export class ProcessPaymentService {
   private paymentProcessor: PaymentProcessor;
   private eventBus: EventBus;
 
-  constructor(dataSource: DataSource) {
-    this.paymentRepository = new PaymentRepository(dataSource);
+  constructor(db: DrizzleDb) {
+    this.paymentRepository = new PaymentRepository(db);
     this.paymentProcessor = new PaymentProcessor(0.9); // 90% success rate
     this.eventBus = EventBus.getInstance();
   }

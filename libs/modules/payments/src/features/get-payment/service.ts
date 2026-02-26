@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { PaymentRepository } from '../../domain/repositories/payment.repository';
 import { NotFoundError } from '@tiny-store/shared-domain';
 import { GetPaymentResponse } from './dto';
@@ -6,8 +6,8 @@ import { GetPaymentResponse } from './dto';
 export class GetPaymentService {
   private paymentRepository: PaymentRepository;
 
-  constructor(dataSource: DataSource) {
-    this.paymentRepository = new PaymentRepository(dataSource);
+  constructor(db: DrizzleDb) {
+    this.paymentRepository = new PaymentRepository(db);
   }
 
   async execute(paymentId: string): Promise<GetPaymentResponse> {

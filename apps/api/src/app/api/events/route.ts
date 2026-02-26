@@ -5,16 +5,16 @@ import { handleError } from '@/lib/error-handler';
 
 export async function GET(request: NextRequest) {
   try {
-    const dataSource = await getDatabase();
+    const db = await getDatabase();
     const { searchParams } = new URL(request.url);
-    
+
     const orderId = searchParams.get('orderId');
     const eventType = searchParams.get('eventType');
 
-    const eventStore = new EventStoreRepository(dataSource);
-    
+    const eventStore = new EventStoreRepository(db);
+
     let events;
-    
+
     if (orderId) {
       events = await eventStore.findByAggregateId(orderId);
     } else if (eventType) {
@@ -22,10 +22,9 @@ export async function GET(request: NextRequest) {
     } else {
       events = await eventStore.findAll();
     }
-    
+
     return NextResponse.json({ events });
   } catch (error) {
     return handleError(error);
   }
 }
-

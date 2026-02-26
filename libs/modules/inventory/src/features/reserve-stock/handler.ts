@@ -1,12 +1,12 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { ReserveStockService } from './service';
 import { ReserveStockDto, ReserveStockResponse } from './dto';
 
 export class ReserveStockHandler {
   private service: ReserveStockService;
 
-  constructor(dataSource: DataSource) {
-    this.service = new ReserveStockService(dataSource);
+  constructor(db: DrizzleDb) {
+    this.service = new ReserveStockService(db);
   }
 
   async handle(dto: ReserveStockDto): Promise<ReserveStockResponse> {

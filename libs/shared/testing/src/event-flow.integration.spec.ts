@@ -8,7 +8,7 @@
  * To run them, you need to properly set up all handlers with correct signatures.
  */
 
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { EventBus } from '@tiny-store/shared-infrastructure';
 import { 
   CreateProductHandler,
@@ -40,7 +40,7 @@ import { TestDatabase, waitForEvents, TestDataBuilder } from './test-helpers';
 
 describe.skip('Event Flow Integration Tests', () => {
   let testDb: TestDatabase;
-  let dataSource: DataSource;
+  let dataSource: DrizzleDb;
   let eventBus: EventBus;
 
   beforeEach(async () => {

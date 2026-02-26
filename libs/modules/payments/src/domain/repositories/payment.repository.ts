@@ -1,73 +1,72 @@
-import { DataSource, Repository } from 'typeorm';
+import { eq } from 'drizzle-orm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
+import { paymentsTable } from '../../db/schema';
 import { Payment } from '../entities/payment';
-import { PaymentEntity } from '../entities/payment.entity';
 import { PaymentMethod } from '../value-objects/payment-method.value-object';
 import { PaymentStatus } from '../enums/payment-status.enum';
 import { Money } from '@tiny-store/shared-domain';
 
 export class PaymentRepository {
-  private repository: Repository<PaymentEntity>;
-
-  constructor(dataSource: DataSource) {
-    this.repository = dataSource.getRepository(PaymentEntity);
-  }
+  constructor(private db: DrizzleDb) {}
 
   async save(payment: Payment): Promise<void> {
-    const entity = this.repository.create({
+    await this.db.insert(paymentsTable).values({
       id: payment.id,
       orderId: payment.orderId,
-      amount: payment.amount.amount,
+      amount: String(payment.amount.amount),
       status: payment.status,
       paymentMethod: {
         type: payment.paymentMethod.type,
         details: payment.paymentMethod.details,
       },
-      failureReason: payment.failureReason ?? undefined,
+      failureReason: payment.failureReason ?? null,
       processingAttempts: payment.processingAttempts,
       createdAt: payment.createdAt,
       updatedAt: payment.updatedAt,
+    }).onConflictDoUpdate({
+      target: paymentsTable.id,
+      set: {
+        orderId: payment.orderId,
+        amount: String(payment.amount.amount),
+        status: payment.status,
+        paymentMethod: {
+          type: payment.paymentMethod.type,
+          details: payment.paymentMethod.details,
+        },
+        failureReason: payment.failureReason ?? null,
+        processingAttempts: payment.processingAttempts,
+        updatedAt: payment.updatedAt,
+      },
     });
-
-    await this.repository.save(entity);
   }
 
   async findById(id: string): Promise<Payment | null> {
-    const entity = await this.repository.findOne({ where: { id } });
-
-    if (!entity) {
-      return null;
-    }
-
-    return this.toDomain(entity);
+    const rows = await this.db.select().from(paymentsTable).where(eq(paymentsTable.id, id));
+    return rows.length > 0 ? this.toDomain(rows[0]) : null;
   }
 
   async findByOrderId(orderId: string): Promise<Payment | null> {
-    const entity = await this.repository.findOne({ where: { orderId } });
-
-    if (!entity) {
-      return null;
-    }
-
-    return this.toDomain(entity);
+    const rows = await this.db.select().from(paymentsTable).where(eq(paymentsTable.orderId, orderId));
+    return rows.length > 0 ? this.toDomain(rows[0]) : null;
   }
 
-  private toDomain(entity: PaymentEntity): Payment {
+  private toDomain(row: typeof paymentsTable.$inferSelect): Payment {
+    const pm = row.paymentMethod as { type: string; details: string };
     const paymentMethod =
-      entity.paymentMethod.type === 'CREDIT_CARD'
+      pm.type === 'CREDIT_CARD'
         ? PaymentMethod.createDefault()
         : PaymentMethod.createDefault();
 
     return Payment.reconstitute(
-      entity.id,
-      entity.orderId,
-      Money.create(entity.amount),
+      row.id,
+      row.orderId,
+      Money.create(Number(row.amount)),
       paymentMethod,
-      entity.status as PaymentStatus,
-      entity.failureReason ?? null,
-      entity.processingAttempts,
-      entity.createdAt,
-      entity.updatedAt
+      row.status as PaymentStatus,
+      row.failureReason ?? null,
+      row.processingAttempts,
+      row.createdAt,
+      row.updatedAt
     );
   }
 }
-

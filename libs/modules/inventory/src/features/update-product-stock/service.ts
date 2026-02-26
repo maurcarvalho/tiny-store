@@ -1,12 +1,12 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { ProductRepository } from '../../domain/repositories/product.repository';
 import { UpdateProductStockDto, UpdateProductStockResponse } from './dto';
 
 export class UpdateProductStockService {
   private productRepository: ProductRepository;
 
-  constructor(dataSource: DataSource) {
-    this.productRepository = new ProductRepository(dataSource);
+  constructor(db: DrizzleDb) {
+    this.productRepository = new ProductRepository(db);
   }
 
   async execute(dto: UpdateProductStockDto): Promise<UpdateProductStockResponse> {

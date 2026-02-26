@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { ProductRepository } from '../../domain/repositories/product.repository';
 import { Product } from '../../domain/entities/product';
 import { Sku } from '../../domain/value-objects/sku.value-object';
@@ -8,8 +8,8 @@ import { BusinessRuleViolationError } from '@tiny-store/shared-domain';
 export class CreateProductService {
   private productRepository: ProductRepository;
 
-  constructor(dataSource: DataSource) {
-    this.productRepository = new ProductRepository(dataSource);
+  constructor(db: DrizzleDb) {
+    this.productRepository = new ProductRepository(db);
   }
 
   async execute(dto: CreateProductDto): Promise<CreateProductResponse> {

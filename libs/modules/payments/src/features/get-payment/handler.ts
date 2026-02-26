@@ -1,12 +1,12 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { GetPaymentService } from './service';
 import { GetPaymentResponse } from './dto';
 
 export class GetPaymentHandler {
   private service: GetPaymentService;
 
-  constructor(dataSource: DataSource) {
-    this.service = new GetPaymentService(dataSource);
+  constructor(db: DrizzleDb) {
+    this.service = new GetPaymentService(db);
   }
 
   async handle(paymentId: string): Promise<GetPaymentResponse> {
