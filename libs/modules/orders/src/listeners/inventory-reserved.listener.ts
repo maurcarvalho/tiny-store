@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { DomainEvent, EventBus } from '@tiny-store/shared-infrastructure';
 import { OrderRepository } from '../domain/repositories/order.repository';
 import {
@@ -10,8 +10,8 @@ export class InventoryReservedListener {
   private orderRepository: OrderRepository;
   private eventBus: EventBus;
 
-  constructor(dataSource: DataSource) {
-    this.orderRepository = new OrderRepository(dataSource);
+  constructor(db: DrizzleDb) {
+    this.orderRepository = new OrderRepository(db);
     this.eventBus = EventBus.getInstance();
   }
 

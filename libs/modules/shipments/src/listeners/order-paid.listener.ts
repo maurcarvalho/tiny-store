@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { DomainEvent } from '@tiny-store/shared-infrastructure';
 import { CreateShipmentHandler } from '../features/create-shipment/handler';
 import { enqueueLabelGeneration } from '../jobs/generate-label.job';
@@ -6,8 +6,8 @@ import { enqueueLabelGeneration } from '../jobs/generate-label.job';
 export class OrderPaidListener {
   private handler: CreateShipmentHandler;
 
-  constructor(dataSource: DataSource) {
-    this.handler = new CreateShipmentHandler(dataSource);
+  constructor(db: DrizzleDb) {
+    this.handler = new CreateShipmentHandler(db);
   }
 
   async handle(event: DomainEvent): Promise<void> {

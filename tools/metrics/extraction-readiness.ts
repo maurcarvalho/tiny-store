@@ -13,7 +13,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as glob from 'glob';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const glob = require('glob') as { sync: (pattern: string, opts: any) => string[] };
 
 const MODULES_ROOT = path.resolve(__dirname, '../../libs/modules');
 const INFRA_ROOT = path.resolve(__dirname, '../../libs/shared/infrastructure/src');

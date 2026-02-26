@@ -1,12 +1,12 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { GetShipmentService } from './service';
 import { GetShipmentResponse } from './dto';
 
 export class GetShipmentHandler {
   private service: GetShipmentService;
 
-  constructor(dataSource: DataSource) {
-    this.service = new GetShipmentService(dataSource);
+  constructor(db: DrizzleDb) {
+    this.service = new GetShipmentService(db);
   }
 
   async handle(shipmentId: string): Promise<GetShipmentResponse> {

@@ -1,5 +1,4 @@
-import 'reflect-metadata';
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { EventBus } from '@tiny-store/shared-infrastructure';
 import { EventStoreRepository } from '@tiny-store/shared-infrastructure';
 
@@ -33,9 +32,9 @@ import { registerLabelGenerationWorker } from '@tiny-store/modules-shipments';
 // Orders - for accessing order details
 import { GetOrderHandler } from '@tiny-store/modules-orders';
 
-export function registerListeners(dataSource: DataSource): void {
+export function registerListeners(db: DrizzleDb): void {
   const eventBus = EventBus.getInstance();
-  const eventStoreRepository = new EventStoreRepository(dataSource);
+  const eventStoreRepository = new EventStoreRepository(db);
 
   // Store all events
   eventBus.subscribe('OrderPlaced', async (event) => {
@@ -79,41 +78,41 @@ export function registerListeners(dataSource: DataSource): void {
   });
 
   // Inventory listeners
-  const orderPlacedListener = new OrderPlacedListener(dataSource);
+  const orderPlacedListener = new OrderPlacedListener(db);
   eventBus.subscribe('OrderPlaced', (event) => orderPlacedListener.handle(event));
 
-  const orderCancelledListener = new OrderCancelledListener(dataSource);
+  const orderCancelledListener = new OrderCancelledListener(db);
   eventBus.subscribe('OrderCancelled', (event) => orderCancelledListener.handle(event));
 
-  const orderPaymentFailedListener = new OrderPaymentFailedListener(dataSource);
+  const orderPaymentFailedListener = new OrderPaymentFailedListener(db);
   eventBus.subscribe('OrderPaymentFailed', (event) =>
     orderPaymentFailedListener.handle(event)
   );
 
   // Orders listeners
-  const inventoryReservedListener = new InventoryReservedListener(dataSource);
+  const inventoryReservedListener = new InventoryReservedListener(db);
   eventBus.subscribe('InventoryReserved', (event) =>
     inventoryReservedListener.handle(event)
   );
 
-  const inventoryReservationFailedListener = new InventoryReservationFailedListener(dataSource);
+  const inventoryReservationFailedListener = new InventoryReservationFailedListener(db);
   eventBus.subscribe('InventoryReservationFailed', (event) =>
     inventoryReservationFailedListener.handle(event)
   );
 
-  const paymentProcessedListener = new PaymentProcessedListener(dataSource);
+  const paymentProcessedListener = new PaymentProcessedListener(db);
   eventBus.subscribe('PaymentProcessed', (event) => paymentProcessedListener.handle(event));
 
-  const paymentFailedListener = new PaymentFailedListener(dataSource);
+  const paymentFailedListener = new PaymentFailedListener(db);
   eventBus.subscribe('PaymentFailed', (event) => paymentFailedListener.handle(event));
 
-  const shipmentCreatedListener = new ShipmentCreatedListener(dataSource);
+  const shipmentCreatedListener = new ShipmentCreatedListener(db);
   eventBus.subscribe('ShipmentCreated', (event) => shipmentCreatedListener.handle(event));
 
   // Payments listener (custom implementation to get order amount)
-  const processPaymentHandler = new ProcessPaymentHandler(dataSource);
-  const getOrderHandler = new GetOrderHandler(dataSource);
-  
+  const processPaymentHandler = new ProcessPaymentHandler(db);
+  const getOrderHandler = new GetOrderHandler(db);
+
   eventBus.subscribe('OrderConfirmed', async (event) => {
     const { orderId } = event.payload;
     try {
@@ -128,8 +127,8 @@ export function registerListeners(dataSource: DataSource): void {
   });
 
   // Shipments listener (custom implementation to get shipping address)
-  const createShipmentHandler = new CreateShipmentHandler(dataSource);
-  
+  const createShipmentHandler = new CreateShipmentHandler(db);
+
   eventBus.subscribe('OrderPaid', async (event) => {
     const { orderId } = event.payload;
     try {
@@ -158,6 +157,5 @@ export function registerListeners(dataSource: DataSource): void {
     // In production: iterate items and call UpdateProductStockHandler per SKU
   });
 
-  console.log('✅ Event listeners registered');
+  console.log('Event listeners registered');
 }
-

@@ -8,11 +8,11 @@ export async function GET(
   { params }: { params: { sku: string } }
 ) {
   try {
-    const dataSource = await getDatabase();
-    const handler = new GetProductHandler(dataSource);
-    
+    const db = await getDatabase();
+    const handler = new GetProductHandler(db);
+
     const result = await handler.handle(params.sku);
-    
+
     return NextResponse.json(result);
   } catch (error) {
     return handleError(error);
@@ -24,7 +24,7 @@ export async function PATCH(
   { params }: { params: { sku: string } }
 ) {
   try {
-    const dataSource = await getDatabase();
+    const db = await getDatabase();
     const body = await request.json();
 
     if (typeof body.stockQuantity !== 'number') {
@@ -34,7 +34,7 @@ export async function PATCH(
       );
     }
 
-    const handler = new UpdateProductStockHandler(dataSource);
+    const handler = new UpdateProductStockHandler(db);
     const result = await handler.handle({
       sku: params.sku,
       stockQuantity: body.stockQuantity,

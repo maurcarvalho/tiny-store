@@ -1,12 +1,12 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { DomainEvent } from '@tiny-store/shared-infrastructure';
 import { ProcessPaymentHandler } from '../features/process-payment/handler';
 
 export class OrderConfirmedListener {
   private handler: ProcessPaymentHandler;
 
-  constructor(dataSource: DataSource) {
-    this.handler = new ProcessPaymentHandler(dataSource);
+  constructor(db: DrizzleDb) {
+    this.handler = new ProcessPaymentHandler(db);
   }
 
   async handle(event: DomainEvent): Promise<void> {

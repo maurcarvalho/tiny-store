@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { OrderRepository } from '../../domain/repositories/order.repository';
 import { Order } from '../../domain/entities/order';
 import { CustomerId } from '../../domain/value-objects/customer-id.value-object';
@@ -15,8 +15,8 @@ export class PlaceOrderService {
   private orderRepository: OrderRepository;
   private eventBus: EventBus;
 
-  constructor(dataSource: DataSource) {
-    this.orderRepository = new OrderRepository(dataSource);
+  constructor(db: DrizzleDb) {
+    this.orderRepository = new OrderRepository(db);
     this.eventBus = EventBus.getInstance();
   }
 

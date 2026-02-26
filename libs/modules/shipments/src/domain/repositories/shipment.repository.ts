@@ -1,19 +1,16 @@
-import { DataSource, Repository } from 'typeorm';
+import { eq } from 'drizzle-orm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
+import { shipmentsTable } from '../../db/schema';
 import { Shipment } from '../entities/shipment';
-import { ShipmentEntity } from '../entities/shipment.entity';
 import { TrackingNumber } from '../value-objects/tracking-number.value-object';
 import { ShipmentStatus } from '../enums/shipment-status.enum';
 import { Address } from '@tiny-store/shared-domain';
 
 export class ShipmentRepository {
-  private repository: Repository<ShipmentEntity>;
-
-  constructor(dataSource: DataSource) {
-    this.repository = dataSource.getRepository(ShipmentEntity);
-  }
+  constructor(private db: DrizzleDb) {}
 
   async save(shipment: Shipment): Promise<void> {
-    const entity = this.repository.create({
+    await this.db.insert(shipmentsTable).values({
       id: shipment.id,
       orderId: shipment.orderId,
       trackingNumber: shipment.trackingNumber.value,
@@ -25,68 +22,69 @@ export class ShipmentRepository {
         country: shipment.shippingAddress.country,
       },
       status: shipment.status,
-      dispatchedAt: shipment.dispatchedAt ?? undefined,
-      deliveredAt: shipment.deliveredAt ?? undefined,
-      estimatedDeliveryDate: shipment.estimatedDeliveryDate ?? undefined,
+      dispatchedAt: shipment.dispatchedAt ?? null,
+      deliveredAt: shipment.deliveredAt ?? null,
+      estimatedDeliveryDate: shipment.estimatedDeliveryDate ?? null,
       createdAt: shipment.createdAt,
       updatedAt: shipment.updatedAt,
+    }).onConflictDoUpdate({
+      target: shipmentsTable.id,
+      set: {
+        orderId: shipment.orderId,
+        trackingNumber: shipment.trackingNumber.value,
+        shippingAddress: {
+          street: shipment.shippingAddress.street,
+          city: shipment.shippingAddress.city,
+          state: shipment.shippingAddress.state,
+          postalCode: shipment.shippingAddress.postalCode,
+          country: shipment.shippingAddress.country,
+        },
+        status: shipment.status,
+        dispatchedAt: shipment.dispatchedAt ?? null,
+        deliveredAt: shipment.deliveredAt ?? null,
+        estimatedDeliveryDate: shipment.estimatedDeliveryDate ?? null,
+        updatedAt: shipment.updatedAt,
+      },
     });
-
-    await this.repository.save(entity);
   }
 
   async findById(id: string): Promise<Shipment | null> {
-    const entity = await this.repository.findOne({ where: { id } });
-
-    if (!entity) {
-      return null;
-    }
-
-    return this.toDomain(entity);
+    const rows = await this.db.select().from(shipmentsTable).where(eq(shipmentsTable.id, id));
+    return rows.length > 0 ? this.toDomain(rows[0]) : null;
   }
 
   async findByOrderId(orderId: string): Promise<Shipment | null> {
-    const entity = await this.repository.findOne({ where: { orderId } });
-
-    if (!entity) {
-      return null;
-    }
-
-    return this.toDomain(entity);
+    const rows = await this.db.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, orderId));
+    return rows.length > 0 ? this.toDomain(rows[0]) : null;
   }
 
   async findByTrackingNumber(trackingNumber: string): Promise<Shipment | null> {
-    const entity = await this.repository.findOne({ where: { trackingNumber } });
-
-    if (!entity) {
-      return null;
-    }
-
-    return this.toDomain(entity);
+    const rows = await this.db.select().from(shipmentsTable).where(eq(shipmentsTable.trackingNumber, trackingNumber));
+    return rows.length > 0 ? this.toDomain(rows[0]) : null;
   }
 
-  private toDomain(entity: ShipmentEntity): Shipment {
-    const trackingNumber = TrackingNumber.create(entity.trackingNumber);
+  private toDomain(row: typeof shipmentsTable.$inferSelect): Shipment {
+    const addr = row.shippingAddress as { street: string; city: string; state: string; postalCode: string; country: string };
+    const trackingNumber = TrackingNumber.create(row.trackingNumber);
     const address = Address.create(
-      entity.shippingAddress.street,
-      entity.shippingAddress.city,
-      entity.shippingAddress.state,
-      entity.shippingAddress.postalCode,
-      entity.shippingAddress.country
+      addr.street,
+      addr.city,
+      addr.state,
+      addr.postalCode,
+      addr.country
     );
 
     return Shipment.reconstitute(
-      entity.id,
-      entity.orderId,
+      row.id,
+      row.orderId,
       trackingNumber,
       address,
-      entity.status as ShipmentStatus,
-      entity.dispatchedAt ?? null,
-      entity.deliveredAt ?? null,
-      entity.estimatedDeliveryDate ?? null,
-      entity.createdAt,
-      entity.updatedAt
+      row.status as ShipmentStatus,
+      row.dispatchedAt ?? null,
+      row.deliveredAt ?? null,
+      row.estimatedDeliveryDate ?? null,
+      row.createdAt,
+      row.updatedAt
     );
   }
 }
-

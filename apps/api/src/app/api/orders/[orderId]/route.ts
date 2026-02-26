@@ -8,14 +8,13 @@ export async function GET(
   { params }: { params: { orderId: string } }
 ) {
   try {
-    const dataSource = await getDatabase();
-    const handler = new GetOrderHandler(dataSource);
-    
+    const db = await getDatabase();
+    const handler = new GetOrderHandler(db);
+
     const result = await handler.handle(params.orderId);
-    
+
     return NextResponse.json(result);
   } catch (error) {
     return handleError(error);
   }
 }
-

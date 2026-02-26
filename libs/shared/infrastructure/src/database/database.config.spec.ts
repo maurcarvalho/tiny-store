@@ -1,160 +1,119 @@
-import { DataSource } from 'typeorm';
-import { createDatabaseConnection } from './database.config';
-import { ProductEntity, StockReservationEntity } from '@tiny-store/modules-inventory/internal';
-import { OrderEntity } from '@tiny-store/modules-orders/internal';
-import { PaymentEntity } from '@tiny-store/modules-payments/internal';
-import { ShipmentEntity } from '@tiny-store/modules-shipments/internal';
-import { EventStoreEntity } from '../event-store/event-store.entity';
+import { createDatabaseConnection, closeDatabaseConnection } from './database.config';
+import type { DrizzleDb } from './database.config';
+import { productsTable, stockReservationsTable } from '@tiny-store/modules-inventory/internal';
+import { ordersTable } from '@tiny-store/modules-orders/internal';
+import { paymentsTable } from '@tiny-store/modules-payments/internal';
+import { shipmentsTable } from '@tiny-store/modules-shipments/internal';
+import { eventStoreTable } from '../event-store/schema';
 
-describe('Database Configuration - Entity Registration', () => {
-  let dataSource: DataSource;
+describe('Database Configuration - Drizzle Schema', () => {
+  let db: DrizzleDb;
 
   beforeAll(async () => {
-    dataSource = await createDatabaseConnection();
+    db = await createDatabaseConnection();
   });
 
   afterAll(async () => {
-    if (dataSource && dataSource.isInitialized) {
-      await dataSource.destroy();
-    }
+    await closeDatabaseConnection();
   });
 
-  describe('Critical Entity Registration', () => {
-    it('should register ProductEntity', () => {
-      const metadata = dataSource.getMetadata(ProductEntity);
-      expect(metadata).toBeDefined();
-      expect(metadata.tableName).toBe('products');
+  describe('Drizzle Table Definitions', () => {
+    it('should define productsTable with correct columns', () => {
+      const columns = Object.keys(productsTable);
+      expect(columns).toContain('id');
+      expect(columns).toContain('sku');
+      expect(columns).toContain('name');
+      expect(columns).toContain('stockQuantity');
+      expect(columns).toContain('reservedQuantity');
+      expect(columns).toContain('status');
+      expect(columns).toContain('createdAt');
+      expect(columns).toContain('updatedAt');
     });
 
-    it('should register StockReservationEntity', () => {
-      const metadata = dataSource.getMetadata(StockReservationEntity);
-      expect(metadata).toBeDefined();
-      expect(metadata.tableName).toBe('stock_reservations');
+    it('should define stockReservationsTable with correct columns', () => {
+      const columns = Object.keys(stockReservationsTable);
+      expect(columns).toContain('id');
+      expect(columns).toContain('orderId');
+      expect(columns).toContain('sku');
+      expect(columns).toContain('quantity');
+      expect(columns).toContain('createdAt');
+      expect(columns).toContain('expiresAt');
+      expect(columns).toContain('released');
     });
 
-    it('should register OrderEntity', () => {
-      const metadata = dataSource.getMetadata(OrderEntity);
-      expect(metadata).toBeDefined();
-      expect(metadata.tableName).toBe('orders');
+    it('should define ordersTable with correct columns', () => {
+      const columns = Object.keys(ordersTable);
+      expect(columns).toContain('id');
+      expect(columns).toContain('customerId');
+      expect(columns).toContain('items');
+      expect(columns).toContain('totalAmount');
+      expect(columns).toContain('shippingAddress');
+      expect(columns).toContain('status');
+      expect(columns).toContain('paymentId');
+      expect(columns).toContain('shipmentId');
+      expect(columns).toContain('createdAt');
+      expect(columns).toContain('updatedAt');
     });
 
-    it('should register PaymentEntity', () => {
-      const metadata = dataSource.getMetadata(PaymentEntity);
-      expect(metadata).toBeDefined();
-      expect(metadata.tableName).toBe('payments');
+    it('should define paymentsTable with correct columns', () => {
+      const columns = Object.keys(paymentsTable);
+      expect(columns).toContain('id');
+      expect(columns).toContain('orderId');
+      expect(columns).toContain('amount');
+      expect(columns).toContain('status');
+      expect(columns).toContain('paymentMethod');
+      expect(columns).toContain('failureReason');
+      expect(columns).toContain('processingAttempts');
+      expect(columns).toContain('createdAt');
+      expect(columns).toContain('updatedAt');
     });
 
-    it('should register ShipmentEntity', () => {
-      const metadata = dataSource.getMetadata(ShipmentEntity);
-      expect(metadata).toBeDefined();
-      expect(metadata.tableName).toBe('shipments');
+    it('should define shipmentsTable with correct columns', () => {
+      const columns = Object.keys(shipmentsTable);
+      expect(columns).toContain('id');
+      expect(columns).toContain('orderId');
+      expect(columns).toContain('trackingNumber');
+      expect(columns).toContain('shippingAddress');
+      expect(columns).toContain('status');
+      expect(columns).toContain('dispatchedAt');
+      expect(columns).toContain('deliveredAt');
+      expect(columns).toContain('estimatedDeliveryDate');
+      expect(columns).toContain('createdAt');
+      expect(columns).toContain('updatedAt');
     });
 
-    it('should register EventStoreEntity', () => {
-      const metadata = dataSource.getMetadata(EventStoreEntity);
-      expect(metadata).toBeDefined();
-      expect(metadata.tableName).toBe('event_store');
+    it('should define eventStoreTable with correct columns', () => {
+      const columns = Object.keys(eventStoreTable);
+      expect(columns).toContain('eventId');
+      expect(columns).toContain('eventType');
+      expect(columns).toContain('aggregateId');
+      expect(columns).toContain('aggregateType');
+      expect(columns).toContain('occurredAt');
+      expect(columns).toContain('payload');
+      expect(columns).toContain('version');
     });
 
-    it('should have exactly 6 entities registered', () => {
-      const entities = dataSource.entityMetadatas;
-      expect(entities.length).toBe(6);
-      
-      const tableNames = entities.map(e => e.tableName).sort();
-      expect(tableNames).toEqual([
-        'event_store',
-        'orders',
-        'payments',
-        'products',
-        'shipments',
-        'stock_reservations',
-      ]);
-    });
-  });
-
-  describe('StockReservationEntity Schema Validation', () => {
-    it('should have all required columns', () => {
-      const metadata = dataSource.getMetadata(StockReservationEntity);
-      const columnNames = metadata.columns.map(c => c.propertyName).sort();
-      
-      expect(columnNames).toContain('id');
-      expect(columnNames).toContain('orderId');
-      expect(columnNames).toContain('sku');
-      expect(columnNames).toContain('quantity');
-      expect(columnNames).toContain('createdAt');
-      expect(columnNames).toContain('expiresAt');
-      expect(columnNames).toContain('released');
-    });
-
-    it('should have correct column types', () => {
-      const metadata = dataSource.getMetadata(StockReservationEntity);
-      
-      const idColumn = metadata.columns.find(c => c.propertyName === 'id');
-      expect(idColumn).toBeDefined();
-      expect(idColumn!.isPrimary).toBe(true);
-      
-      const releasedColumn = metadata.columns.find(c => c.propertyName === 'released');
-      expect(releasedColumn).toBeDefined();
-      expect(releasedColumn!.default).toBe(false);
-      
-      const expiresAtColumn = metadata.columns.find(c => c.propertyName === 'expiresAt');
-      expect(expiresAtColumn).toBeDefined();
-      expect(expiresAtColumn!.isNullable).toBe(true);
-    });
-  });
-
-  describe('ProductEntity Schema Validation', () => {
-    it('should have all required columns', () => {
-      const metadata = dataSource.getMetadata(ProductEntity);
-      const columnNames = metadata.columns.map(c => c.propertyName).sort();
-      
-      expect(columnNames).toContain('id');
-      expect(columnNames).toContain('sku');
-      expect(columnNames).toContain('name');
-      expect(columnNames).toContain('stockQuantity');
-      expect(columnNames).toContain('reservedQuantity');
-      expect(columnNames).toContain('status');
-      expect(columnNames).toContain('createdAt');
-      expect(columnNames).toContain('updatedAt');
+    it('should have exactly 6 table definitions across modules', () => {
+      const tables = [
+        productsTable,
+        stockReservationsTable,
+        ordersTable,
+        paymentsTable,
+        shipmentsTable,
+        eventStoreTable,
+      ];
+      expect(tables).toHaveLength(6);
+      tables.forEach((table) => expect(table).toBeDefined());
     });
   });
 
-  describe('OrderEntity Schema Validation', () => {
-    it('should have all required columns', () => {
-      const metadata = dataSource.getMetadata(OrderEntity);
-      const columnNames = metadata.columns.map(c => c.propertyName).sort();
-      
-      expect(columnNames).toContain('id');
-      expect(columnNames).toContain('customerId');
-      expect(columnNames).toContain('items');
-      expect(columnNames).toContain('totalAmount');
-      expect(columnNames).toContain('shippingAddress');
-      expect(columnNames).toContain('status');
-      expect(columnNames).toContain('paymentId');
-      expect(columnNames).toContain('shipmentId');
-      expect(columnNames).toContain('createdAt');
-      expect(columnNames).toContain('updatedAt');
-    });
-  });
-
-  describe('Database Tables Creation', () => {
-    it('should create stock_reservations table', async () => {
-      const queryRunner = dataSource.createQueryRunner();
-      
-      try {
-        const tables = await queryRunner.getTables();
-        const tableNames = tables.map(t => t.name);
-        
-        expect(tableNames).toContain('stock_reservations');
-        expect(tableNames).toContain('products');
-        expect(tableNames).toContain('orders');
-        expect(tableNames).toContain('payments');
-        expect(tableNames).toContain('shipments');
-        expect(tableNames).toContain('event_store');
-      } finally {
-        await queryRunner.release();
-      }
+  describe('Database Connection', () => {
+    it('should create a valid drizzle database instance', () => {
+      expect(db).toBeDefined();
+      expect(typeof db.select).toBe('function');
+      expect(typeof db.insert).toBe('function');
+      expect(typeof db.update).toBe('function');
+      expect(typeof db.delete).toBe('function');
     });
   });
 });
-

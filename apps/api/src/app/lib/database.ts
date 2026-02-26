@@ -1,16 +1,13 @@
-import 'reflect-metadata';
-import { createDatabaseConnection, createAllModuleSchemas } from '@tiny-store/shared-infrastructure';
-import { DataSource } from 'typeorm';
+import { createDatabaseConnection, closeDatabaseConnection } from '@tiny-store/shared-infrastructure';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 
-let dataSource: DataSource | null = null;
+let db: DrizzleDb | null = null;
 
-export async function getDatabase(): Promise<DataSource> {
-  if (!dataSource) {
-    dataSource = await createDatabaseConnection();
-    await createAllModuleSchemas(dataSource);
-    console.log('✅ Database connected (module schemas created)');
+export async function getDatabase(): Promise<DrizzleDb> {
+  if (!db) {
+    db = await createDatabaseConnection();
+    console.log('Database connected');
   }
-  
-  return dataSource;
-}
 
+  return db;
+}
