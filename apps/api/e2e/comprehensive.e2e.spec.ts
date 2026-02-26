@@ -14,12 +14,12 @@ import {
   waitForInventoryState,
   waitForEvent,
   waitForEventMatching,
-  waitForEvents,
   pollingMetrics,
   setTimeoutProfile,
   sleep,
   retry,
 } from '@tiny-store/shared-testing';
+import { waitForEvents } from '../../../libs/shared/testing/src/e2e-helpers';
 
 describe('E2E Tests - Complete Order Lifecycle', () => {
   const API_BASE_URL = 'http://localhost:3000';
@@ -262,7 +262,7 @@ describe('E2E Tests - Complete Order Lifecycle', () => {
         orderId = orderResponse.data.orderId;
 
         // Wait for SHIPPED status
-        const shipped = await waitForOrderStatus(orderId, 'SHIPPED', 8000);
+        const shipped = await waitForOrderStatus(orderId!, 'SHIPPED', 8000);
         return shipped;
       }, 5);
 
