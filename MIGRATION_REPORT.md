@@ -220,3 +220,74 @@ Table creation is done via raw SQL in `createDatabaseConnection()`. For producti
 | New TS errors (test file only) | ⚠️ 11 (non-blocking) |
 
 **Overall: ✅ Migration successful.** The codebase is cleanly migrated from TypeORM to Drizzle ORM with declarative per-module schema isolation. The 11 new type errors are in a non-running integration test file and don't affect functionality.
+
+---
+
+## 13. Full Integration Test (Live Server)
+
+### Environment
+- PostgreSQL 16 Alpine via docker-compose (volumes destroyed and recreated fresh)
+- Redis 7 Alpine
+- Next.js 15 dev server on port 3000
+
+### Schema Provisioning (from blank DB)
+
+| Step | Result |
+|------|--------|
+| Fresh DB (volumes destroyed) | ✅ Only `public` schema |
+| First API request triggers `createDatabaseConnection()` | ✅ |
+| `CREATE SCHEMA IF NOT EXISTS` for all 4 modules | ✅ inventory, orders, payments, shipments |
+| `CREATE TABLE IF NOT EXISTS` for all 7 tables | ✅ |
+| Event store in public schema | ✅ |
+
+### API Endpoints Tested
+
+| Endpoint | Method | Result |
+|----------|--------|--------|
+| `/api/health` | GET | ✅ `{"status":"OK"}` |
+| `/api/inventory/products` | POST | ✅ Product created, returns ID + SKU |
+| `/api/inventory/products/:sku` | GET | ✅ Returns full product with stock |
+| `/api/orders` | POST | ✅ Order created, triggers full event chain |
+| `/api/orders/:id` | GET | ✅ Returns order with payment + shipment IDs |
+| `/api/orders` | GET | ✅ Lists all orders |
+| `/api/orders/:id/cancel` | POST | ✅ Business rule validation (can't cancel SHIPPED) |
+| `/api/events` | GET | ✅ Returns all events from event store |
+| `/api/events/:id` | GET | ✅ Returns single event with payload |
+| Non-existent order | GET | ✅ `{"error":"Order X not found","type":"NotFoundError"}` |
+| Non-existent product | GET | ✅ `{"error":"Product with SKU X not found","type":"NotFoundError"}` |
+
+### Full Order Lifecycle (E2E)
+
+```
+OrderPlaced → InventoryReserved → OrderConfirmed → PaymentProcessed → OrderPaid → ShipmentCreated → OrderShipped
+```
+
+| Step | Verified |
+|------|----------|
+| Order created (PENDING) | ✅ |
+| Stock reserved (inventory.stock_reservations) | ✅ |
+| Order confirmed → payment processed | ✅ |
+| Payment stored (payments.payments, status=SUCCEEDED) | ✅ |
+| Shipment created with tracking number | ✅ |
+| Order updated to SHIPPED | ✅ |
+| All 7 event types stored in event_store | ✅ |
+| Stock quantity correct (100 total, 3 reserved, 97 available) | ✅ |
+
+### Database Verification (direct SQL)
+
+| Table | Schema | Rows | Data Integrity |
+|-------|--------|------|----------------|
+| `inventory.products` | inventory | 1 | ✅ Correct stock/reserved counts |
+| `inventory.stock_reservations` | inventory | 2 | ✅ Correct order/sku/quantity |
+| `orders.orders` | orders | 2 | ✅ SHIPPED status, correct amounts |
+| `payments.payments` | payments | 2 | ✅ SUCCEEDED, amounts match orders |
+| `shipments.shipments` | shipments | 2 | ✅ Tracking numbers generated |
+| `public.event_store` | public | 14 | ✅ 7 event types × 2 orders |
+
+### Numeric Handling
+
+| Field | DB Type | DB Value | API Value | Correct? |
+|-------|---------|----------|-----------|----------|
+| `total_amount` | NUMERIC(10,2) | `59.98` | `59.98` | ✅ |
+| `amount` (payment) | NUMERIC(10,2) | `59.98` | — | ✅ |
+| JSONB `unitPrice` | JSONB | `29.99` | `29.99` | ✅ |
