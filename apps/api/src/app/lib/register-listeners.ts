@@ -32,6 +32,111 @@ import { registerLabelGenerationWorker } from '@tiny-store/modules-shipments';
 // Orders - for accessing order details
 import { GetOrderHandler } from '@tiny-store/modules-orders';
 
+const EXTRACTED_MODULES = (process.env['EXTRACTED_MODULES'] || '')
+  .split(',')
+  .map((m) => m.trim())
+  .filter(Boolean);
+
+function isExtracted(mod: string): boolean {
+  return EXTRACTED_MODULES.includes(mod);
+}
+
+/**
+ * MODULE_REGISTRY maps module names to their registration functions.
+ * Extracting a module is a one-line config change via EXTRACTED_MODULES env var.
+ */
+const MODULE_REGISTRY: Record<string, (db: DrizzleDb, eventBus: EventBus) => void> = {
+  inventory: registerInventoryListeners,
+  orders: registerOrdersListeners,
+  payments: registerPaymentsListeners,
+  shipments: registerShipmentsListeners,
+};
+
+function registerInventoryListeners(db: DrizzleDb, eventBus: EventBus): void {
+  const orderPlacedListener = new OrderPlacedListener(db);
+  eventBus.subscribe('OrderPlaced', (event) => orderPlacedListener.handle(event));
+
+  const orderCancelledListener = new OrderCancelledListener(db);
+  eventBus.subscribe('OrderCancelled', (event) => orderCancelledListener.handle(event));
+
+  const orderPaymentFailedListener = new OrderPaymentFailedListener(db);
+  eventBus.subscribe('OrderPaymentFailed', (event) =>
+    orderPaymentFailedListener.handle(event)
+  );
+
+  registerStockSyncWorker(async (data) => {
+    console.log(`[StockSync] Processing ${data.items.length} items from ${data.source}`);
+  });
+}
+
+function registerOrdersListeners(db: DrizzleDb, eventBus: EventBus): void {
+  const inventoryReservedListener = new InventoryReservedListener(db);
+  eventBus.subscribe('InventoryReserved', (event) =>
+    inventoryReservedListener.handle(event)
+  );
+
+  const inventoryReservationFailedListener = new InventoryReservationFailedListener(db);
+  eventBus.subscribe('InventoryReservationFailed', (event) =>
+    inventoryReservationFailedListener.handle(event)
+  );
+
+  const paymentProcessedListener = new PaymentProcessedListener(db);
+  eventBus.subscribe('PaymentProcessed', (event) => paymentProcessedListener.handle(event));
+
+  const paymentFailedListener = new PaymentFailedListener(db);
+  eventBus.subscribe('PaymentFailed', (event) => paymentFailedListener.handle(event));
+
+  const shipmentCreatedListener = new ShipmentCreatedListener(db);
+  eventBus.subscribe('ShipmentCreated', (event) => shipmentCreatedListener.handle(event));
+}
+
+function registerPaymentsListeners(db: DrizzleDb, eventBus: EventBus): void {
+  const processPaymentHandler = new ProcessPaymentHandler(db);
+  const getOrderHandler = new GetOrderHandler(db);
+
+  eventBus.subscribe('OrderConfirmed', async (event) => {
+    const { orderId } = event.payload;
+    try {
+      const order = await getOrderHandler.handle(orderId);
+      await processPaymentHandler.handle({
+        orderId,
+        amount: order.totalAmount,
+      });
+    } catch (error) {
+      console.error('Error processing payment for confirmed order:', error);
+    }
+  });
+
+  registerPaymentProcessingWorker(async (data) => {
+    try {
+      await processPaymentHandler.handle(data);
+    } catch (error) {
+      console.error('Error processing payment via queue:', error);
+      throw error;
+    }
+  });
+}
+
+function registerShipmentsListeners(db: DrizzleDb, eventBus: EventBus): void {
+  const createShipmentHandler = new CreateShipmentHandler(db);
+  const getOrderHandler = new GetOrderHandler(db);
+
+  eventBus.subscribe('OrderPaid', async (event) => {
+    const { orderId } = event.payload;
+    try {
+      const order = await getOrderHandler.handle(orderId);
+      await createShipmentHandler.handle({
+        orderId,
+        shippingAddress: order.shippingAddress,
+      });
+    } catch (error) {
+      console.error('Error creating shipment for paid order:', error);
+    }
+  });
+
+  registerLabelGenerationWorker();
+}
+
 export function registerListeners(db: DrizzleDb): void {
   const eventBus = EventBus.getInstance();
   const eventStoreRepository = new EventStoreRepository(db);
@@ -77,85 +182,14 @@ export function registerListeners(db: DrizzleDb): void {
     await eventStoreRepository.save(event);
   });
 
-  // Inventory listeners
-  const orderPlacedListener = new OrderPlacedListener(db);
-  eventBus.subscribe('OrderPlaced', (event) => orderPlacedListener.handle(event));
-
-  const orderCancelledListener = new OrderCancelledListener(db);
-  eventBus.subscribe('OrderCancelled', (event) => orderCancelledListener.handle(event));
-
-  const orderPaymentFailedListener = new OrderPaymentFailedListener(db);
-  eventBus.subscribe('OrderPaymentFailed', (event) =>
-    orderPaymentFailedListener.handle(event)
-  );
-
-  // Orders listeners
-  const inventoryReservedListener = new InventoryReservedListener(db);
-  eventBus.subscribe('InventoryReserved', (event) =>
-    inventoryReservedListener.handle(event)
-  );
-
-  const inventoryReservationFailedListener = new InventoryReservationFailedListener(db);
-  eventBus.subscribe('InventoryReservationFailed', (event) =>
-    inventoryReservationFailedListener.handle(event)
-  );
-
-  const paymentProcessedListener = new PaymentProcessedListener(db);
-  eventBus.subscribe('PaymentProcessed', (event) => paymentProcessedListener.handle(event));
-
-  const paymentFailedListener = new PaymentFailedListener(db);
-  eventBus.subscribe('PaymentFailed', (event) => paymentFailedListener.handle(event));
-
-  const shipmentCreatedListener = new ShipmentCreatedListener(db);
-  eventBus.subscribe('ShipmentCreated', (event) => shipmentCreatedListener.handle(event));
-
-  // Payments listener (custom implementation to get order amount)
-  const processPaymentHandler = new ProcessPaymentHandler(db);
-  const getOrderHandler = new GetOrderHandler(db);
-
-  eventBus.subscribe('OrderConfirmed', async (event) => {
-    const { orderId } = event.payload;
-    try {
-      const order = await getOrderHandler.handle(orderId);
-      await processPaymentHandler.handle({
-        orderId,
-        amount: order.totalAmount,
-      });
-    } catch (error) {
-      console.error('Error processing payment for confirmed order:', error);
+  // Register module listeners via registry, skipping extracted modules
+  for (const [moduleName, registerFn] of Object.entries(MODULE_REGISTRY)) {
+    if (isExtracted(moduleName)) {
+      console.log(`Skipping registration for extracted module: ${moduleName}`);
+      continue;
     }
-  });
-
-  // Shipments listener (custom implementation to get shipping address)
-  const createShipmentHandler = new CreateShipmentHandler(db);
-
-  eventBus.subscribe('OrderPaid', async (event) => {
-    const { orderId } = event.payload;
-    try {
-      const order = await getOrderHandler.handle(orderId);
-      await createShipmentHandler.handle({
-        orderId,
-        shippingAddress: order.shippingAddress,
-      });
-    } catch (error) {
-      console.error('Error creating shipment for paid order:', error);
-    }
-  });
-
-  // Register queue workers
-  registerLabelGenerationWorker();
-  registerPaymentProcessingWorker(async (data) => {
-    try {
-      await processPaymentHandler.handle(data);
-    } catch (error) {
-      console.error('Error processing payment via queue:', error);
-      throw error; // Re-throw to trigger retry
-    }
-  });
-  registerStockSyncWorker(async (data) => {
-    console.log(`[StockSync] Processing ${data.items.length} items from ${data.source}`);
-    // In production: iterate items and call UpdateProductStockHandler per SKU
-  });
+    registerFn(db, eventBus);
+  }
 
   console.log('Event listeners registered');
 }

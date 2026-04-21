@@ -1,0 +1,30 @@
+{
+  "name": "orders-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/orders-service/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/apps/orders-service",
+        "main": "apps/orders-service/src/main.ts",
+        "tsConfig": "apps/orders-service/tsconfig.json"
+      }
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "options": {
+        "buildTarget": "orders-service:build"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["apps/orders-service/**/*.ts"]
+      }
+    }
+  },
+  "tags": ["type:app"]
+}

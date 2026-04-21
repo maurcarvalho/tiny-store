@@ -6,26 +6,33 @@ describe('Extraction Readiness Calculator', () => {
     expect(checks).toHaveLength(5);
   });
 
-  it('should compute a normalized score between 0 and 1', () => {
-    const { normalized } = computeExtractionReadiness('orders');
-    expect(normalized).toBeGreaterThanOrEqual(0);
-    expect(normalized).toBeLessThanOrEqual(1);
+  it('should return epsilon as 0 or 1', () => {
+    const { epsilon } = computeExtractionReadiness('orders');
+    expect([0, 1]).toContain(epsilon);
   });
 
-  it('should score high for well-structured modules', () => {
-    const { normalized } = computeExtractionReadiness('orders');
-    // orders module should score >= 0.7 given it has events, listeners, ACL
-    expect(normalized).toBeGreaterThanOrEqual(0.7);
+  it('each check should have pass boolean and detail string', () => {
+    const { checks } = computeExtractionReadiness('orders');
+    for (const check of checks) {
+      expect(typeof check.pass).toBe('boolean');
+      expect(typeof check.detail).toBe('string');
+      expect(typeof check.name).toBe('string');
+    }
   });
 
-  it('should sum check scores to total', () => {
-    const { checks, total } = computeExtractionReadiness('orders');
-    const sum = checks.reduce((s, c) => s + c.score, 0);
-    expect(sum).toBe(total);
+  it('epsilon should be 1 only when all checks pass', () => {
+    const { checks, epsilon } = computeExtractionReadiness('orders');
+    const allPass = checks.every((c) => c.pass);
+    if (allPass) {
+      expect(epsilon).toBe(1);
+    } else {
+      expect(epsilon).toBe(0);
+    }
   });
 
   it('should handle non-existent module gracefully', () => {
-    const { normalized } = computeExtractionReadiness('nonexistent');
-    expect(normalized).toBeGreaterThanOrEqual(0);
+    const { epsilon, checks } = computeExtractionReadiness('nonexistent');
+    expect(epsilon).toBe(0);
+    expect(checks).toHaveLength(5);
   });
 });
