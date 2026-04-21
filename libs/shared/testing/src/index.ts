@@ -1,4 +1,5 @@
 export * from './test-helpers';
+export * from './pglite-test-db';
 
 // Re-export from e2e-helpers, excluding waitForEvents (already exported from test-helpers)
 export {

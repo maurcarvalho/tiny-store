@@ -1,13 +1,9 @@
-import {
-  createDatabaseConnection,
-  closeDatabaseConnection,
-  eventStoreTable,
-} from '@tiny-store/shared-infrastructure';
-import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
+import { eventStoreTable } from '@tiny-store/shared-infrastructure';
 import { productsTable, stockReservationsTable } from '@tiny-store/modules-inventory/internal';
 import { ordersTable } from '@tiny-store/modules-orders/internal';
 import { paymentsTable } from '@tiny-store/modules-payments/internal';
 import { shipmentsTable } from '@tiny-store/modules-shipments/internal';
+import { createTestDb, closeTestDb, type TestDbHandle } from './pglite-test-db';
 
 describe('Database Configuration - Drizzle Schema', () => {
   describe('Drizzle Table Definitions', () => {
@@ -100,24 +96,23 @@ describe('Database Configuration - Drizzle Schema', () => {
     });
   });
 
-  // Skipped: requires a running PostgreSQL instance reachable via DB_HOST/DB_PORT.
-  describe.skip('Database Connection', () => {
-    let db: DrizzleDb;
+  describe('Database Connection', () => {
+    let handle: TestDbHandle;
 
     beforeAll(async () => {
-      db = await createDatabaseConnection();
+      handle = await createTestDb();
     });
 
     afterAll(async () => {
-      await closeDatabaseConnection();
+      await closeTestDb(handle);
     });
 
     it('should create a valid drizzle database instance', () => {
-      expect(db).toBeDefined();
-      expect(typeof db.select).toBe('function');
-      expect(typeof db.insert).toBe('function');
-      expect(typeof db.update).toBe('function');
-      expect(typeof db.delete).toBe('function');
+      expect(handle.db).toBeDefined();
+      expect(typeof handle.db.select).toBe('function');
+      expect(typeof handle.db.insert).toBe('function');
+      expect(typeof handle.db.update).toBe('function');
+      expect(typeof handle.db.delete).toBe('function');
     });
   });
 });

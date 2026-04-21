@@ -42,6 +42,7 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.4.4",
     "@nx/eslint": "19.0.0",
     "@nx/eslint-plugin": "19.0.0",
     "@nx/jest": "19.0.0",
