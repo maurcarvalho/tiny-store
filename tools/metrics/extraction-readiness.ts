@@ -3,12 +3,14 @@
  *
  * Usage: npx ts-node tools/metrics/extraction-readiness.ts --module orders
  *
- * Five checks (100 pts total):
- *   1. Cross-module imports   — 25 pts (0 imports = full score)
- *   2. Event-bus usage        — 20 pts (has listeners = full score)
- *   3. ACL layer              — 15 pts (public API via index.ts = full score)
- *   4. Database schema iso    — 20 pts (schema-isolation file exists)
- *   5. Versioned events       — 20 pts (events have version field)
+ * Binary gate: ε_m = 1 only when ALL 5 checks pass, 0 otherwise.
+ *
+ * Checks:
+ *   1. Cross-module imports   — 0 cross-module imports
+ *   2. Event-bus usage        — has listeners AND events
+ *   3. ACL layer              — has index.ts AND internal.ts
+ *   4. Database schema iso    — schema-isolation file exists
+ *   5. Versioned events       — all events have version field
  */
 
 import * as fs from 'fs';
@@ -21,8 +23,7 @@ const INFRA_ROOT = path.resolve(__dirname, '../../libs/shared/infrastructure/src
 
 interface CheckResult {
   name: string;
-  maxPoints: number;
-  score: number;
+  pass: boolean;
   detail: string;
 }
 
@@ -30,7 +31,7 @@ function getModuleSourceFiles(mod: string): string[] {
   const base = path.join(MODULES_ROOT, mod, 'src');
   if (!fs.existsSync(base)) return [];
   return glob.sync('**/*.ts', { cwd: base, absolute: true }).filter(
-    (f) => !f.endsWith('.spec.ts') && !f.endsWith('.test.ts')
+    (f: string) => !f.endsWith('.spec.ts') && !f.endsWith('.test.ts')
   );
 }
 
@@ -45,12 +46,10 @@ function checkCrossModuleImports(mod: string): CheckResult {
       if (match[1] !== mod) crossImports++;
     }
   }
-  const score = crossImports === 0 ? 25 : Math.max(0, 25 - crossImports * 5);
   return {
     name: 'Cross-module imports',
-    maxPoints: 25,
-    score,
-    detail: crossImports === 0 ? 'No cross-module imports ✓' : `${crossImports} cross-module import(s) found`,
+    pass: crossImports === 0,
+    detail: crossImports === 0 ? 'No cross-module imports' : `${crossImports} cross-module import(s) found`,
   };
 }
 
@@ -63,11 +62,10 @@ function checkEventBusUsage(mod: string): CheckResult {
   const hasEvents = fs.existsSync(eventsDir) &&
     fs.readdirSync(eventsDir).some((f) => f.endsWith('.ts'));
 
-  const score = (hasListeners ? 10 : 0) + (hasEvents ? 10 : 0);
+  const pass = hasListeners && hasEvents;
   return {
     name: 'Event-bus usage',
-    maxPoints: 20,
-    score,
+    pass,
     detail: `listeners=${hasListeners ? 'yes' : 'no'}, events=${hasEvents ? 'yes' : 'no'}`,
   };
 }
@@ -77,11 +75,10 @@ function checkACLLayer(mod: string): CheckResult {
   const internalPath = path.join(MODULES_ROOT, mod, 'src', 'internal.ts');
   const hasIndex = fs.existsSync(indexPath);
   const hasInternal = fs.existsSync(internalPath);
-  const score = (hasIndex ? 10 : 0) + (hasInternal ? 5 : 0);
+  const pass = hasIndex && hasInternal;
   return {
     name: 'ACL layer (public API boundary)',
-    maxPoints: 15,
-    score,
+    pass,
     detail: `index.ts=${hasIndex ? 'yes' : 'no'}, internal.ts=${hasInternal ? 'yes' : 'no'}`,
   };
 }
@@ -91,34 +88,34 @@ function checkSchemaIsolation(): CheckResult {
   const exists = fs.existsSync(schemaFile);
   return {
     name: 'Database schema isolation',
-    maxPoints: 20,
-    score: exists ? 20 : 0,
-    detail: exists ? 'schema-isolation.ts present ✓' : 'schema-isolation.ts missing',
+    pass: exists,
+    detail: exists ? 'schema-isolation.ts present' : 'schema-isolation.ts missing',
   };
 }
 
 function checkVersionedEvents(mod: string): CheckResult {
   const eventsDir = path.join(MODULES_ROOT, mod, 'src', 'domain', 'events');
   if (!fs.existsSync(eventsDir)) {
-    return { name: 'Versioned event contracts', maxPoints: 20, score: 0, detail: 'No events directory' };
+    return { name: 'Versioned event contracts', pass: false, detail: 'No events directory' };
   }
   const eventFiles = fs.readdirSync(eventsDir).filter((f) => f.endsWith('.ts'));
+  if (eventFiles.length === 0) {
+    return { name: 'Versioned event contracts', pass: false, detail: 'No event files found' };
+  }
   let withVersion = 0;
   for (const file of eventFiles) {
     const content = fs.readFileSync(path.join(eventsDir, file), 'utf-8');
     if (/version:\s*\d+/.test(content) || /version\s*=\s*\d+/.test(content)) withVersion++;
   }
-  const ratio = eventFiles.length > 0 ? withVersion / eventFiles.length : 0;
-  const score = Math.round(ratio * 20);
+  const allVersioned = withVersion === eventFiles.length;
   return {
     name: 'Versioned event contracts',
-    maxPoints: 20,
-    score,
+    pass: allVersioned,
     detail: `${withVersion}/${eventFiles.length} events with version field`,
   };
 }
 
-function computeExtractionReadiness(mod: string): { checks: CheckResult[]; total: number; max: number; normalized: number } {
+function computeExtractionReadiness(mod: string): { checks: CheckResult[]; epsilon: number } {
   const checks = [
     checkCrossModuleImports(mod),
     checkEventBusUsage(mod),
@@ -126,24 +123,24 @@ function computeExtractionReadiness(mod: string): { checks: CheckResult[]; total
     checkSchemaIsolation(),
     checkVersionedEvents(mod),
   ];
-  const total = checks.reduce((s, c) => s + c.score, 0);
-  const max = checks.reduce((s, c) => s + c.maxPoints, 0);
-  return { checks, total, max, normalized: total / max };
+  const allPass = checks.every((c) => c.pass);
+  return { checks, epsilon: allPass ? 1 : 0 };
 }
 
 function printReport(mod: string): void {
-  const { checks, total, max, normalized } = computeExtractionReadiness(mod);
+  const { checks, epsilon } = computeExtractionReadiness(mod);
 
   console.log(`\n╔══════════════════════════════════════════════════╗`);
   console.log(`║  Extraction Readiness Report: ${mod.padEnd(19)}║`);
   console.log(`╠══════════════════════════════════════════════════╣`);
   for (const check of checks) {
-    const bar = '█'.repeat(Math.round((check.score / check.maxPoints) * 10)).padEnd(10, '░');
-    console.log(`║  ${check.name.padEnd(32)} ${bar} ${String(check.score).padStart(2)}/${check.maxPoints}  ║`);
+    const status = check.pass ? 'PASS' : 'FAIL';
+    const icon = check.pass ? '✓' : '✗';
+    console.log(`║  ${icon} [${status}] ${check.name.padEnd(33)}║`);
     console.log(`║    ${check.detail.padEnd(44)}║`);
   }
   console.log(`╠══════════════════════════════════════════════════╣`);
-  console.log(`║  ε_${mod.padEnd(10)} = ${total}/${max} = ${normalized.toFixed(4).padEnd(24)}║`);
+  console.log(`║  ε_${mod.padEnd(10)} = ${epsilon}${' '.repeat(33)}║`);
   console.log(`╚══════════════════════════════════════════════════╝\n`);
 }
 

@@ -1,0 +1,84 @@
+services:
+  main-db:
+    image: postgres:16-alpine
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_DB: tinystore
+      POSTGRES_USER: tinystore
+      POSTGRES_PASSWORD: tinystore
+    volumes:
+      - main-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tinystore']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  orders-db:
+    image: postgres:16-alpine
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: orders
+    volumes:
+      - orders-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U orders']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  monolith:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      EXTRACTED_MODULES: orders
+      DB_HOST: main-db
+      DB_PORT: '5432'
+      DB_USER: tinystore
+      DB_PASSWORD: tinystore
+      DB_NAME: tinystore
+    depends_on:
+      main-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  orders-service:
+    build:
+      context: .
+      dockerfile: apps/orders-service/Dockerfile
+    ports:
+      - '3001:3001'
+    environment:
+      PORT: '3001'
+      DB_HOST: orders-db
+      DB_PORT: '5432'
+      DB_USER: orders
+      DB_PASSWORD: orders
+      DB_NAME: orders
+    depends_on:
+      orders-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  main-db-data:
+  orders-db-data:
