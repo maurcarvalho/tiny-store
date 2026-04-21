@@ -1,24 +1,89 @@
-import { createDatabaseConnection, closeDatabaseConnection } from '@tiny-store/shared-infrastructure';
+jest.mock('drizzle-orm', () => {
+  const actual = jest.requireActual('drizzle-orm');
+  return {
+    ...actual,
+    eq: (column: unknown, value: unknown) => ({ __mockOp: 'eq', column, value }),
+  };
+});
+
 import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { StockReservationRepository } from './stock-reservation.repository';
 import { stockReservationsTable } from '../../db/schema';
+
+type Row = typeof stockReservationsTable.$inferSelect;
+
+interface MockCondition {
+  __mockOp: 'eq';
+  column: unknown;
+  value: unknown;
+}
+
+function columnKey(table: Record<string, unknown>, column: unknown): string {
+  for (const [key, val] of Object.entries(table)) {
+    if (val === column) return key;
+  }
+  throw new Error('Unknown column in mock db');
+}
+
+function createMockDb(): DrizzleDb {
+  const store = new Map<string, Row>();
+
+  const api = {
+    __store: store,
+    insert: (table: Record<string, unknown>) => ({
+      values: (data: Row) => ({
+        onConflictDoUpdate: ({ set }: { target: unknown; set: Partial<Row> }) => {
+          const existing = store.get(data.id);
+          if (existing) {
+            store.set(data.id, { ...existing, ...set });
+          } else {
+            store.set(data.id, { ...data });
+          }
+          return Promise.resolve();
+        },
+      }),
+    }),
+    select: () => ({
+      from: (table: Record<string, unknown>) => ({
+        where: (cond: MockCondition) => {
+          const key = columnKey(table, cond.column);
+          const rows = Array.from(store.values()).filter(
+            (r) => (r as Record<string, unknown>)[key] === cond.value
+          );
+          return Promise.resolve(rows);
+        },
+      }),
+    }),
+    update: (table: Record<string, unknown>) => ({
+      set: (patch: Partial<Row>) => ({
+        where: (cond: MockCondition) => {
+          const key = columnKey(table, cond.column);
+          for (const [id, row] of store.entries()) {
+            if ((row as Record<string, unknown>)[key] === cond.value) {
+              store.set(id, { ...row, ...patch });
+            }
+          }
+          return Promise.resolve();
+        },
+      }),
+    }),
+    delete: (_table: Record<string, unknown>) => {
+      store.clear();
+      return Promise.resolve();
+    },
+  };
+
+  return api as unknown as DrizzleDb;
+}
 
 describe('StockReservationRepository', () => {
   let db: DrizzleDb;
   let repository: StockReservationRepository;
 
-  beforeAll(async () => {
-    db = await createDatabaseConnection();
-  });
-
   beforeEach(async () => {
+    db = createMockDb();
     repository = new StockReservationRepository(db);
-    // Clean up all reservations
     await db.delete(stockReservationsTable);
-  });
-
-  afterAll(async () => {
-    await closeDatabaseConnection();
   });
 
   describe('Create Reservation', () => {
