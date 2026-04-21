@@ -19,7 +19,7 @@ import {
   sleep,
   retry,
 } from '@tiny-store/shared-testing';
-import { waitForEvents } from '../../../libs/shared/testing/src/e2e-helpers';
+import { waitForEvents } from '@tiny-store/shared-testing';
 
 describe('E2E Tests - Complete Order Lifecycle', () => {
   const API_BASE_URL = 'http://localhost:3000';
