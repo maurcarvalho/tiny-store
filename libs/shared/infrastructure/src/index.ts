@@ -8,3 +8,5 @@ export * from './event-store/event-store.repository';
 export * from './cache/cache.service';
 export * from './cache/cache.decorator';
 export * from './queue/queue.service';
+export * from './observability';
+export * from './messaging';

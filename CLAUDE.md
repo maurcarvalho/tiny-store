@@ -151,6 +151,40 @@ When creating a new module (e.g., `notifications`):
 | `test:guidelines` | Run boundary + scalability checks |
 | `lint:boundaries` | Run ESLint boundary enforcement across all projects |
 
+## G4–G6 Infrastructure
+
+These pieces back the thesis chapters on migration readiness, deployment, and observability. They are **building blocks** — none of them mutate existing handlers, services, or repositories.
+
+### Observability (G6) — `libs/shared/infrastructure/src/observability/`
+- `getModuleLogger(moduleName)` — structured JSON logger with active trace ID injection
+- `getModuleMeter(moduleName)` — OpenTelemetry counters + histogram per module
+- `getModuleTracer(moduleName)` + `tracedHandler(tracer, name, fn)` — span helpers
+- `injectTraceContext(headers)` / `extractTraceContext(headers)` — for Kafka/HTTP propagation
+- Only `@opentelemetry/api` is installed; SDK wiring is a deployment concern
+
+### Messaging (G4) — `libs/shared/infrastructure/src/messaging/`
+- `KafkaEventPublisher` — `kafkajs`-backed publisher with W3C trace context headers; optional transport, env-gated at deploy time
+
+### Workflows + ACL (G4) — `libs/modules/orders/src/workflows/`, `libs/modules/orders/src/gateways/`
+- `orderFulfillmentWorkflow` — Temporal saga with compensating actions (reserve → pay → ship; release/refund on failure)
+- `activities.ts` — wraps existing services + EventBus publication
+- `worker.ts` — Temporal worker bootstrap (connects to `TEMPORAL_ADDRESS`)
+- `InventoryGateway` + `InProcessInventoryGateway` — Anti-Corruption Layer; **internal to orders, not exported from `index.ts`**
+
+### Deployment (G5)
+- `docker-compose.yml` — full local stack (api, postgres, redis, zookeeper, kafka, temporal, temporal-ui, jaeger, prometheus, grafana)
+- `docker-compose.l3.yml` — extracted-orders topology with the same infra
+- `apps/api/Dockerfile` + `apps/orders-service/Dockerfile` — multi-stage Node 22 builds
+- `.github/workflows/ci.yml` — `nx affected` for lint/test/build
+- `config/deploy.yml` + `.kamal/secrets` — Kamal production deploy with Traefik + Let's Encrypt
+- `infra/prometheus/{prometheus,alerts}.yml` — scrape config + per-module SLO alerts
+- `infra/grafana/dashboards/module-overview.json` — request rate, error rate, p95 latency per module
+
+### Do NOT
+- Wire the observability helpers into existing handlers as part of unrelated work — the listings document the *pattern* only
+- Expose gateways, workflows, or activities from a module's `index.ts`
+- Remove the optional/env-gated nature of Kafka and Temporal — both must remain non-required for tests to pass without external infra
+
 ## Tech Stack
 
 - **Runtime:** Node.js + TypeScript

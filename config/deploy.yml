@@ -1,0 +1,80 @@
+service: tiny-store
+image: maurcarvalho/tiny-store
+
+servers:
+  web:
+    hosts:
+      - <%= ENV['DEPLOY_HOST'] %>
+    labels:
+      traefik.http.routers.tiny-store.rule: Host(`<%= ENV['DEPLOY_DOMAIN'] %>`)
+      traefik.http.routers.tiny-store.tls.certresolver: letsencrypt
+
+registry:
+  server: ghcr.io
+  username: maurcarvalho
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+env:
+  clear:
+    NODE_ENV: production
+    KAFKA_BROKER: kafka:9092
+    TEMPORAL_ADDRESS: temporal:7233
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+  secret:
+    - DATABASE_URL
+    - REDIS_URL
+
+accessories:
+  postgres:
+    image: postgres:16-alpine
+    port: 5432
+    env:
+      clear:
+        POSTGRES_USER: tiny
+        POSTGRES_PASSWORD: store
+        POSTGRES_DB: tinystore
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    port: 6379
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    port: 9092
+    env:
+      clear:
+        KAFKA_BROKER_ID: 1
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+
+  temporal:
+    image: temporalio/auto-setup:1.24.2
+    port: 7233
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    port: "16686:16686"
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    port: 9090
+    volumes:
+      - ./infra/prometheus:/etc/prometheus
+
+  grafana:
+    image: grafana/grafana:10.4.1
+    port: 3001
+
+traefik:
+  options:
+    publish:
+      - "443:443"
+    volume:
+      - "/letsencrypt:/letsencrypt"
+  args:
+    entryPoints.websecure.address: ":443"
+    certificatesResolvers.letsencrypt.acme.email: mau@adalist.com
+    certificatesResolvers.letsencrypt.acme.storage: /letsencrypt/acme.json
+    certificatesResolvers.letsencrypt.acme.httpchallenge.entrypoint: web

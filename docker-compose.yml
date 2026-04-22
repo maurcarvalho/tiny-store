@@ -1,32 +1,109 @@
 services:
-  redis:
-    image: redis:7-alpine
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     ports:
-      - '6379:6379'
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 5s
-      timeout: 3s
-      retries: 5
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgres://tiny:store@postgres:5432/tinystore
+      REDIS_URL: redis://redis:6379
+      KAFKA_BROKER: kafka:9092
+      TEMPORAL_ADDRESS: temporal:7233
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+      - temporal
 
   postgres:
     image: postgres:16-alpine
     ports:
       - '5432:5432'
     environment:
+      POSTGRES_USER: tiny
+      POSTGRES_PASSWORD: store
       POSTGRES_DB: tinystore
-      POSTGRES_USER: tinystore
-      POSTGRES_PASSWORD: tinystore
     volumes:
-      - pg-data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U tinystore']
+      test: ['CMD-SHELL', 'pg_isready -U tiny']
       interval: 5s
       timeout: 3s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    ports:
+      - '9092:9092'
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+
+  temporal:
+    image: temporalio/auto-setup:1.24.2
+    ports:
+      - '7233:7233'
+    environment:
+      DB: postgresql
+      DB_PORT: 5432
+      POSTGRES_USER: tiny
+      POSTGRES_PWD: store
+      POSTGRES_SEEDS: postgres
+    depends_on:
+      - postgres
+
+  temporal-ui:
+    image: temporalio/ui:2.26.2
+    ports:
+      - '8233:8080'
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    depends_on:
+      - temporal
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    ports:
+      - '16686:16686'
+      - '4318:4318'
+    environment:
+      COLLECTOR_OTLP_ENABLED: 'true'
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./infra/prometheus:/etc/prometheus
+
+  grafana:
+    image: grafana/grafana:10.4.1
+    ports:
+      - '3001:3000'
+    volumes:
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning
+
 volumes:
-  redis-data:
-  pg-data:
+  pgdata:
