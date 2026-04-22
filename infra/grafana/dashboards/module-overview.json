@@ -1,0 +1,215 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "Prometheus",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Per-module SLI overview for Tiny Store. Displays request rate, error rate, and p95 latency for orders, inventory, payments, and shipments.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "row",
+      "title": "Orders",
+      "id": 100,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "orders — request rate",
+      "id": 1,
+      "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
+      "targets": [
+        { "expr": "sum(rate(orders_requests_total[5m]))", "legendFormat": "req/s", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "orders — error rate",
+      "id": 2,
+      "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
+      "targets": [
+        { "expr": "sum(rate(orders_errors_total[5m])) / sum(rate(orders_requests_total[5m]))", "legendFormat": "error %", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "orders — p95 latency",
+      "id": 3,
+      "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(orders_latency_bucket[5m])))", "legendFormat": "p95", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+
+    {
+      "type": "row",
+      "title": "Inventory",
+      "id": 200,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "inventory — request rate",
+      "id": 4,
+      "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 9 },
+      "targets": [
+        { "expr": "sum(rate(inventory_requests_total[5m]))", "legendFormat": "req/s", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "inventory — error rate",
+      "id": 5,
+      "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 9 },
+      "targets": [
+        { "expr": "sum(rate(inventory_errors_total[5m])) / sum(rate(inventory_requests_total[5m]))", "legendFormat": "error %", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "inventory — p95 latency",
+      "id": 6,
+      "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 9 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(inventory_latency_bucket[5m])))", "legendFormat": "p95", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+
+    {
+      "type": "row",
+      "title": "Payments",
+      "id": 300,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "payments — request rate",
+      "id": 7,
+      "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 17 },
+      "targets": [
+        { "expr": "sum(rate(payments_requests_total[5m]))", "legendFormat": "req/s", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "payments — error rate",
+      "id": 8,
+      "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 17 },
+      "targets": [
+        { "expr": "sum(rate(payments_errors_total[5m])) / sum(rate(payments_requests_total[5m]))", "legendFormat": "error %", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "payments — p95 latency",
+      "id": 9,
+      "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 17 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(payments_latency_bucket[5m])))", "legendFormat": "p95", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+
+    {
+      "type": "row",
+      "title": "Shipments",
+      "id": 400,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "shipments — request rate",
+      "id": 10,
+      "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 25 },
+      "targets": [
+        { "expr": "sum(rate(shipments_requests_total[5m]))", "legendFormat": "req/s", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "shipments — error rate",
+      "id": 11,
+      "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 25 },
+      "targets": [
+        { "expr": "sum(rate(shipments_errors_total[5m])) / sum(rate(shipments_requests_total[5m]))", "legendFormat": "error %", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "shipments — p95 latency",
+      "id": 12,
+      "datasource": "Prometheus",
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 25 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(shipments_latency_bucket[5m])))", "legendFormat": "p95", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["tiny-store", "modular-monolith"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Tiny Store — Module Overview",
+  "uid": "tiny-store-module-overview",
+  "version": 1,
+  "weekStart": ""
+}
