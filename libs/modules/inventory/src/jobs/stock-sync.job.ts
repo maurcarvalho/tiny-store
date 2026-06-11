@@ -56,10 +56,5 @@ async function enqueueStockSync(data: StockSyncData): Promise<void> {
   });
 }
 
-export {
-  registerStockSyncWorker,
-  enqueueStockSync,
-  StockSyncData,
-  StockSyncItem,
-  QUEUE_NAME,
-};
+export { registerStockSyncWorker, enqueueStockSync, QUEUE_NAME };
+export type { StockSyncData, StockSyncItem };

@@ -50,9 +50,5 @@ async function enqueuePaymentProcessing(data: PaymentProcessingData): Promise<vo
   });
 }
 
-export {
-  registerPaymentProcessingWorker,
-  enqueuePaymentProcessing,
-  PaymentProcessingData,
-  QUEUE_NAME,
-};
+export { registerPaymentProcessingWorker, enqueuePaymentProcessing, QUEUE_NAME };
+export type { PaymentProcessingData };

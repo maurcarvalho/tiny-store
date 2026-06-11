@@ -24,7 +24,7 @@ export class ReleaseStockService {
       dto.orderId
     );
 
-    const released = [];
+    const released: { sku: string; quantity: number }[] = [];
 
     for (const reservation of reservations) {
       const product = await this.productRepository.findBySku(reservation.sku);

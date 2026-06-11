@@ -5,13 +5,14 @@ import { handleError } from '@/lib/error-handler';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    const { eventId } = await params;
     const db = await getDatabase();
     const eventStore = new EventStoreRepository(db);
 
-    const event = await eventStore.findById(params.eventId);
+    const event = await eventStore.findById(eventId);
 
     if (!event) {
       return NextResponse.json(

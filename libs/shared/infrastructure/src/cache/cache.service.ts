@@ -166,4 +166,5 @@ class CacheService {
   }
 }
 
-export { CacheService, CacheAdapter, InMemoryCacheAdapter, RedisCacheAdapter, CacheServiceConfig };
+export { CacheService, InMemoryCacheAdapter, RedisCacheAdapter };
+export type { CacheAdapter, CacheServiceConfig };
