@@ -18,7 +18,6 @@ module.exports = {
   ],
   testPathIgnorePatterns: [
     '/node_modules/',
-    'event-flow.integration.spec.ts', // Skip - requires full handler setup
-    'module-boundary.spec.ts'         // Skip - requires runtime module resolution
+    'event-flow.integration.spec.ts' // Skip - requires full handler setup
   ]
 };
