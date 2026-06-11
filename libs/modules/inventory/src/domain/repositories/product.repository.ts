@@ -1,18 +1,15 @@
-import { DataSource, Repository } from 'typeorm';
+import { eq } from 'drizzle-orm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
+import { productsTable } from '../../db/schema';
 import { Product } from '../entities/product';
-import { ProductEntity } from '../entities/product.entity';
 import { Sku } from '../value-objects/sku.value-object';
 import { ProductStatus } from '../enums/product-status.enum';
 
 export class ProductRepository {
-  private repository: Repository<ProductEntity>;
-
-  constructor(dataSource: DataSource) {
-    this.repository = dataSource.getRepository(ProductEntity);
-  }
+  constructor(private db: DrizzleDb) {}
 
   async save(product: Product): Promise<void> {
-    const entity = this.repository.create({
+    await this.db.insert(productsTable).values({
       id: product.id,
       sku: product.sku.value,
       name: product.name,
@@ -21,47 +18,44 @@ export class ProductRepository {
       status: product.status,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
+    }).onConflictDoUpdate({
+      target: productsTable.id,
+      set: {
+        sku: product.sku.value,
+        name: product.name,
+        stockQuantity: product.stockQuantity,
+        reservedQuantity: product.reservedQuantity,
+        status: product.status,
+        updatedAt: product.updatedAt,
+      },
     });
-
-    await this.repository.save(entity);
   }
 
   async findById(id: string): Promise<Product | null> {
-    const entity = await this.repository.findOne({ where: { id } });
-    
-    if (!entity) {
-      return null;
-    }
-
-    return this.toDomain(entity);
+    const rows = await this.db.select().from(productsTable).where(eq(productsTable.id, id));
+    return rows.length > 0 ? this.toDomain(rows[0]) : null;
   }
 
   async findBySku(sku: string): Promise<Product | null> {
-    const entity = await this.repository.findOne({ where: { sku } });
-    
-    if (!entity) {
-      return null;
-    }
-
-    return this.toDomain(entity);
+    const rows = await this.db.select().from(productsTable).where(eq(productsTable.sku, sku));
+    return rows.length > 0 ? this.toDomain(rows[0]) : null;
   }
 
   async findAll(): Promise<Product[]> {
-    const entities = await this.repository.find();
-    return entities.map((entity) => this.toDomain(entity));
+    const rows = await this.db.select().from(productsTable);
+    return rows.map((row) => this.toDomain(row));
   }
 
-  private toDomain(entity: ProductEntity): Product {
+  private toDomain(row: typeof productsTable.$inferSelect): Product {
     return Product.reconstitute(
-      entity.id,
-      Sku.create(entity.sku),
-      entity.name,
-      entity.stockQuantity,
-      entity.reservedQuantity,
-      entity.status as ProductStatus,
-      entity.createdAt,
-      entity.updatedAt
+      row.id,
+      Sku.create(row.sku),
+      row.name,
+      row.stockQuantity,
+      row.reservedQuantity,
+      row.status as ProductStatus,
+      row.createdAt,
+      row.updatedAt
     );
   }
 }
-

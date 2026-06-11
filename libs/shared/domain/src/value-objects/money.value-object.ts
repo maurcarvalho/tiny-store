@@ -36,7 +36,7 @@ export class Money extends ValueObject<MoneyProps> {
       throw new ValidationError('Cannot add money with different currencies');
     }
     
-    return Money.create(this.amount + other.amount, this.currency);
+    return Money.create(Math.round((this.amount + other.amount) * 100) / 100, this.currency);
   }
 
   subtract(other: Money): Money {
@@ -44,11 +44,11 @@ export class Money extends ValueObject<MoneyProps> {
       throw new ValidationError('Cannot subtract money with different currencies');
     }
     
-    return Money.create(this.amount - other.amount, this.currency);
+    return Money.create(Math.round((this.amount - other.amount) * 100) / 100, this.currency);
   }
 
   multiply(factor: number): Money {
-    return Money.create(this.amount * factor, this.currency);
+    return Money.create(Math.round(this.amount * factor * 100) / 100, this.currency);
   }
 
   isGreaterThan(other: Money): boolean {

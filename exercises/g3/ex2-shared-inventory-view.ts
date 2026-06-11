@@ -1,80 +1,50 @@
 /**
- * Exercise 2: Shared Table Access (ω degradation)
+ * Exercise G3-2: Shared Data / Cross-Schema Query
  *
- * This would be added to the orders module, e.g.:
- *   libs/modules/orders/src/features/get-order/service.ts
+ * This is a modified version showing raw SQL that queries another module's
+ * database schema directly instead of going through events or public APIs.
  *
- * VIOLATION: The orders module executes a raw SQL query that directly reads
- * from the inventory module's 'products' table to show stock availability
- * alongside order details. This bypasses the event/ACL boundary and creates
- * a shared-data coupling between orders and inventory.
+ * WHY THIS VIOLATES G3:
+ * - G1 (Guidelines) passes: the query returns correct data
+ * - G2 (Boundaries) passes: no TypeScript import of another module
+ * - G3 (Scalability) FAILS: data ownership drops — the Orders module reads
+ *   directly from `inventory.products`, bypassing the Inventory module's
+ *   public API. When Inventory is extracted to its own database, this raw
+ *   SQL query will break because the `inventory` schema no longer exists
+ *   in the Orders database.
  *
- * WHY G1 PASSES: There is no import from @tiny-store/modules-inventory.
- * The query is raw SQL executed through the DataSource — no boundary test
- * detects cross-module table access.
- *
- * WHY G2 PASSES: No new module-level dependencies are introduced. The
- * maintainability metrics (ρ_api, fan-in, complexity) remain unchanged.
- *
- * WHAT G3 CATCHES: ω drops below 1.0 because the 'products' table is now
- * accessed by two modules (inventory owns it, orders reads it). If these
- * modules were extracted to separate services, they would need to share a
- * database or the query would break.
- *
- * Metric impact: ω ↓ (from 1.0 to 0.8, since 1 of 5 entities loses single ownership)
- *
- * FIX: Expose stock availability through an event (InventoryUpdated with
- * current stock levels) or a query handler in the inventory module, consumed
- * through the composition root.
+ * FIX: Use the Inventory module's public API (GetProductHandler) or cache
+ * stock data via events (e.g., listen to InventoryReserved/Released events
+ * and maintain a local read model).
  */
 
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
+import { sql } from 'drizzle-orm';
 
-interface OrderWithStock {
+interface OrderValidationResult {
   orderId: string;
-  items: Array<{
-    sku: string;
-    quantity: number;
-    availableStock: number; // ❌ comes from inventory's table
-  }>;
+  hasStock: boolean;
 }
 
-export class GetOrderWithStockService {
-  constructor(private dataSource: DataSource) {}
+/**
+ * This service directly queries the inventory schema from within the
+ * orders module — a G3 violation that breaks data ownership.
+ */
+export class OrderValidationServiceWithSharedData {
+  constructor(private db: DrizzleDb) {}
 
-  async execute(orderId: string): Promise<OrderWithStock> {
-    // First get the order (this is fine — orders module owns the 'orders' table)
-    const orderRows = await this.dataSource.query(
-      `SELECT * FROM orders WHERE id = $1`,
-      [orderId]
+  async validateStock(orderId: string, sku: string, quantity: number): Promise<OrderValidationResult> {
+    // VIOLATION: raw SQL reading from another module's schema
+    const result = await this.db.execute(
+      sql`SELECT stock_quantity FROM inventory.products WHERE sku = ${sku}`
     );
 
-    if (orderRows.length === 0) {
-      throw new Error(`Order ${orderId} not found`);
-    }
-
-    const order = orderRows[0];
-    const items = JSON.parse(order.items);
-
-    // ❌ VIOLATION: Direct SQL query to inventory's 'products' table
-    // The orders module should NOT access inventory's data directly.
-    const enrichedItems = await Promise.all(
-      items.map(async (item: { sku: string; quantity: number }) => {
-        const productRows = await this.dataSource.query(
-          `SELECT "stockQuantity" FROM products WHERE sku = $1`,
-          [item.sku]
-        );
-        return {
-          sku: item.sku,
-          quantity: item.quantity,
-          availableStock: productRows[0]?.stockQuantity ?? 0, // ❌ cross-module data
-        };
-      })
-    );
+    const row = (result as unknown as Array<{ stock_quantity: number }>)[0];
+    const stockQuantity = row?.stock_quantity ?? 0;
 
     return {
-      orderId: order.id,
-      items: enrichedItems,
+      orderId,
+      hasStock: stockQuantity >= quantity,
     };
   }
 }

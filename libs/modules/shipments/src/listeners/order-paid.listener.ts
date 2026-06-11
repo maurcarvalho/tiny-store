@@ -1,12 +1,13 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { DomainEvent } from '@tiny-store/shared-infrastructure';
 import { CreateShipmentHandler } from '../features/create-shipment/handler';
+import { enqueueLabelGeneration } from '../jobs/generate-label.job';
 
 export class OrderPaidListener {
   private handler: CreateShipmentHandler;
 
-  constructor(dataSource: DataSource) {
-    this.handler = new CreateShipmentHandler(dataSource);
+  constructor(db: DrizzleDb) {
+    this.handler = new CreateShipmentHandler(db);
   }
 
   async handle(event: DomainEvent): Promise<void> {
@@ -17,7 +18,12 @@ export class OrderPaidListener {
     // For this implementation, we'll log this limitation
     console.log(`OrderPaidListener: Creating shipment for order ${orderId}`);
     
-    // This will be handled properly in the API layer where we have access to order details
+    // Enqueue async label generation
+    await enqueueLabelGeneration({
+      shipmentId: `ship-${orderId}`,
+      orderId,
+      trackingNumber: `TN-${Date.now()}`,
+    });
   }
 }
 

@@ -1,45 +1,29 @@
-import { DataSource } from 'typeorm';
-import * as path from 'path';
+import { createDatabaseConnection, closeDatabaseConnection } from '@tiny-store/shared-infrastructure';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { randomUUID } from 'crypto';
 
 /**
  * Test Database Helper
- * Creates isolated database instances for each test
+ * Creates isolated database instances for each test using Drizzle + PostgreSQL
  */
 export class TestDatabase {
-  private dataSource: DataSource | null = null;
+  private db: DrizzleDb | null = null;
 
-  async setup(): Promise<DataSource> {
-    const dbName = `test-${randomUUID()}.db`;
-    
-    this.dataSource = new DataSource({
-      type: 'sqlite',
-      database: path.join(process.cwd(), 'test-dbs', dbName),
-      entities: [
-        path.join(process.cwd(), 'libs/modules/**/*.entity.{ts,js}'),
-        path.join(process.cwd(), 'libs/shared/**/*.entity.{ts,js}'),
-      ],
-      synchronize: true,
-      logging: false,
-      dropSchema: true,
-    });
-
-    await this.dataSource.initialize();
-    return this.dataSource;
+  async setup(): Promise<DrizzleDb> {
+    this.db = await createDatabaseConnection();
+    return this.db;
   }
 
   async cleanup(): Promise<void> {
-    if (this.dataSource) {
-      await this.dataSource.destroy();
-      this.dataSource = null;
-    }
+    await closeDatabaseConnection();
+    this.db = null;
   }
 
-  getDataSource(): DataSource {
-    if (!this.dataSource) {
+  getDb(): DrizzleDb {
+    if (!this.db) {
       throw new Error('Database not initialized. Call setup() first.');
     }
-    return this.dataSource;
+    return this.db;
   }
 }
 
@@ -226,4 +210,3 @@ export class ModuleBoundaryTester {
     // For now, we'll verify through test scenarios
   }
 }
-

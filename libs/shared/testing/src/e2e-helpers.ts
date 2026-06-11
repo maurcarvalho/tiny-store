@@ -389,7 +389,7 @@ export async function waitForInventoryState(
     {
       maxWaitMs: maxWaitMs || activeProfile.inventoryUpdate,
       pollIntervalMs: 100,
-      errorMessage: `Product ${sku} did not reach expected state (reserved: ${expectedState.reserved}, available: ${expectedState.available}). Last seen: reserved=${lastState?.reserved}, available=${lastState?.available}`,
+      errorMessage: `Product ${sku} did not reach expected state (reserved: ${expectedState.reserved}, available: ${expectedState.available}). Last seen: reserved=${(lastState as any)?.reserved}, available=${(lastState as any)?.available}`,
       operationName: 'waitForInventoryState',
     }
   );

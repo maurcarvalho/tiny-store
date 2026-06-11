@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { ShipmentRepository } from '../../domain/repositories/shipment.repository';
 import { Shipment } from '../../domain/entities/shipment';
 import { Address } from '@tiny-store/shared-domain';
@@ -13,8 +13,8 @@ export class CreateShipmentService {
   private shipmentRepository: ShipmentRepository;
   private eventBus: EventBus;
 
-  constructor(dataSource: DataSource) {
-    this.shipmentRepository = new ShipmentRepository(dataSource);
+  constructor(db: DrizzleDb) {
+    this.shipmentRepository = new ShipmentRepository(db);
     this.eventBus = EventBus.getInstance();
   }
 

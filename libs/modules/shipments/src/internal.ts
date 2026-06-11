@@ -1,5 +1,5 @@
 /**
  * Internal exports — NOT part of the public API.
- * Used only by shared/infrastructure for TypeORM entity registration.
+ * Drizzle schema tables for use by shared/infrastructure.
  */
-export { ShipmentEntity } from './domain/entities/shipment.entity';
+export { shipmentsTable } from './db/schema';

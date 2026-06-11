@@ -5,17 +5,17 @@ import { handleError } from '@/lib/error-handler';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const dataSource = await getDatabase();
-    const handler = new GetOrderHandler(dataSource);
-    
-    const result = await handler.handle(params.orderId);
-    
+    const { orderId } = await params;
+    const db = await getDatabase();
+    const handler = new GetOrderHandler(db);
+
+    const result = await handler.handle(orderId);
+
     return NextResponse.json(result);
   } catch (error) {
     return handleError(error);
   }
 }
-

@@ -1,12 +1,12 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { CreateProductService } from './service';
 import { CreateProductDto, CreateProductResponse } from './dto';
 
 export class CreateProductHandler {
   private service: CreateProductService;
 
-  constructor(dataSource: DataSource) {
-    this.service = new CreateProductService(dataSource);
+  constructor(db: DrizzleDb) {
+    this.service = new CreateProductService(db);
   }
 
   async handle(dto: CreateProductDto): Promise<CreateProductResponse> {

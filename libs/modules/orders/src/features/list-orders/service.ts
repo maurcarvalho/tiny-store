@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { OrderRepository } from '../../domain/repositories/order.repository';
 import { OrderStatus } from '../../domain/enums/order-status.enum';
 import { ListOrdersQuery, ListOrdersResponse } from './dto';
@@ -6,8 +6,8 @@ import { ListOrdersQuery, ListOrdersResponse } from './dto';
 export class ListOrdersService {
   private orderRepository: OrderRepository;
 
-  constructor(dataSource: DataSource) {
-    this.orderRepository = new OrderRepository(dataSource);
+  constructor(db: DrizzleDb) {
+    this.orderRepository = new OrderRepository(db);
   }
 
   async execute(query: ListOrdersQuery): Promise<ListOrdersResponse> {

@@ -1,15 +1,17 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { ProductRepository } from '../../domain/repositories/product.repository';
 import { GetProductResponse } from './dto';
 import { NotFoundError } from '@tiny-store/shared-domain';
+import { Cacheable } from '@tiny-store/shared-infrastructure';
 
 export class GetProductService {
   private productRepository: ProductRepository;
 
-  constructor(dataSource: DataSource) {
-    this.productRepository = new ProductRepository(dataSource);
+  constructor(db: DrizzleDb) {
+    this.productRepository = new ProductRepository(db);
   }
 
+  @Cacheable('inventory', 60, (sku: string) => `product:${sku}`)
   async execute(sku: string): Promise<GetProductResponse> {
     const product = await this.productRepository.findBySku(sku);
 

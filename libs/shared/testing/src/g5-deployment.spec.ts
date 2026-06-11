@@ -127,7 +127,9 @@ describe('G5: Deployment Strategy', () => {
 
       for (const [alias, targets] of Object.entries(paths) as [string, string[]][]) {
         const target = targets[0];
-        const fullPath = path.join(ROOT, target);
+        // Wildcard aliases map to a directory, not a file
+        const resolved = target.endsWith('/*') ? target.slice(0, -2) : target;
+        const fullPath = path.join(ROOT, resolved);
         const exists = fs.existsSync(fullPath);
         if (!exists) {
           console.warn(`  ⚠ ${alias} → ${target} (file not found)`);

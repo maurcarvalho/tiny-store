@@ -8,7 +8,7 @@
  * To run them, you need to properly set up all handlers with correct signatures.
  */
 
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { EventBus } from '@tiny-store/shared-infrastructure';
 import { 
   CreateProductHandler,
@@ -40,13 +40,13 @@ import { TestDatabase, waitForEvents, TestDataBuilder } from './test-helpers';
 
 describe.skip('Event Flow Integration Tests', () => {
   let testDb: TestDatabase;
-  let dataSource: DataSource;
+  let dataSource: DrizzleDb;
   let eventBus: EventBus;
 
   beforeEach(async () => {
     testDb = new TestDatabase();
     dataSource = await testDb.setup();
-    eventBus = new EventBus();
+    eventBus = EventBus.getInstance();
   });
 
   afterEach(async () => {
@@ -65,17 +65,11 @@ describe.skip('Event Flow Integration Tests', () => {
       const product = await createProductHandler.handle(productData);
 
       // Setup: Register all listeners
-      const orderPlacedListener = new OrderPlacedListener(
-        new ReserveStockHandler(dataSource, eventBus)
-      );
-      const inventoryReservedListener = new InventoryReservedListener(dataSource, eventBus);
-      const orderConfirmedListener = new OrderConfirmedListener(
-        new ProcessPaymentHandler(dataSource, eventBus)
-      );
-      const paymentProcessedListener = new PaymentProcessedListener(dataSource, eventBus);
-      const orderPaidListener = new OrderPaidListener(
-        new CreateShipmentHandler(dataSource, eventBus)
-      );
+      const orderPlacedListener = new OrderPlacedListener(dataSource);
+      const inventoryReservedListener = new InventoryReservedListener(dataSource);
+      const orderConfirmedListener = new OrderConfirmedListener(dataSource);
+      const paymentProcessedListener = new PaymentProcessedListener(dataSource);
+      const orderPaidListener = new OrderPaidListener(dataSource);
 
       eventBus.subscribe('OrderPlaced', (e) => orderPlacedListener.handle(e));
       eventBus.subscribe('InventoryReserved', (e) => inventoryReservedListener.handle(e));
@@ -95,7 +89,7 @@ describe.skip('Event Flow Integration Tests', () => {
         ],
       });
 
-      const placeOrderHandler = new PlaceOrderHandler(dataSource, eventBus);
+      const placeOrderHandler = new PlaceOrderHandler(dataSource);
       const order = await placeOrderHandler.handle(orderData);
 
       expect(order.orderId).toBeDefined();
@@ -126,7 +120,7 @@ describe.skip('Event Flow Integration Tests', () => {
 
       // Spy on event bus
       const originalPublish = eventBus.publish.bind(eventBus);
-      eventBus.publish = (event: any) => {
+      eventBus.publish = async (event: any) => {
         eventsPublished.push(event.eventType);
         originalPublish(event);
       };
@@ -141,9 +135,7 @@ describe.skip('Event Flow Integration Tests', () => {
       await createProductHandler.handle(productData);
 
       // Register listeners
-      const orderPlacedListener = new OrderPlacedListener(
-        new ReserveStockHandler(dataSource, eventBus)
-      );
+      const orderPlacedListener = new OrderPlacedListener(dataSource);
       eventBus.subscribe('OrderPlaced', (e) => orderPlacedListener.handle(e));
 
       // Place order
@@ -158,7 +150,7 @@ describe.skip('Event Flow Integration Tests', () => {
         ],
       });
 
-      const placeOrderHandler = new PlaceOrderHandler(dataSource, eventBus);
+      const placeOrderHandler = new PlaceOrderHandler(dataSource);
       await placeOrderHandler.handle(orderData);
 
       await waitForEvents(200);
@@ -182,10 +174,8 @@ describe.skip('Event Flow Integration Tests', () => {
       await createProductHandler.handle(productData);
 
       // Register listeners
-      const orderPlacedListener = new OrderPlacedListener(
-        new ReserveStockHandler(dataSource, eventBus)
-      );
-      const inventoryFailedListener = new InventoryReservationFailedListener(dataSource, eventBus);
+      const orderPlacedListener = new OrderPlacedListener(dataSource);
+      const inventoryFailedListener = new InventoryReservationFailedListener(dataSource);
 
       eventBus.subscribe('OrderPlaced', (e) => orderPlacedListener.handle(e));
       eventBus.subscribe('InventoryReservationFailed', (e) => inventoryFailedListener.handle(e));
@@ -202,7 +192,7 @@ describe.skip('Event Flow Integration Tests', () => {
         ],
       });
 
-      const placeOrderHandler = new PlaceOrderHandler(dataSource, eventBus);
+      const placeOrderHandler = new PlaceOrderHandler(dataSource);
       const order = await placeOrderHandler.handle(orderData);
 
       await waitForEvents(200);
@@ -226,7 +216,7 @@ describe.skip('Event Flow Integration Tests', () => {
       const eventsPublished: string[] = [];
 
       const originalPublish = eventBus.publish.bind(eventBus);
-      eventBus.publish = (event: any) => {
+      eventBus.publish = async (event: any) => {
         eventsPublished.push(event.eventType);
         originalPublish(event);
       };
@@ -240,10 +230,8 @@ describe.skip('Event Flow Integration Tests', () => {
       const createProductHandler = new CreateProductHandler(dataSource);
       await createProductHandler.handle(productData);
 
-      const orderPlacedListener = new OrderPlacedListener(
-        new ReserveStockHandler(dataSource, eventBus)
-      );
-      const inventoryFailedListener = new InventoryReservationFailedListener(dataSource, eventBus);
+      const orderPlacedListener = new OrderPlacedListener(dataSource);
+      const inventoryFailedListener = new InventoryReservationFailedListener(dataSource);
 
       eventBus.subscribe('OrderPlaced', (e) => orderPlacedListener.handle(e));
       eventBus.subscribe('InventoryReservationFailed', (e) => inventoryFailedListener.handle(e));
@@ -260,7 +248,7 @@ describe.skip('Event Flow Integration Tests', () => {
         ],
       });
 
-      const placeOrderHandler = new PlaceOrderHandler(dataSource, eventBus);
+      const placeOrderHandler = new PlaceOrderHandler(dataSource);
       await placeOrderHandler.handle(orderData);
 
       await waitForEvents(200);
@@ -284,10 +272,8 @@ describe.skip('Event Flow Integration Tests', () => {
       await createProductHandler.handle(productData);
 
       // Register listeners for order placement
-      const orderPlacedListener = new OrderPlacedListener(
-        new ReserveStockHandler(dataSource, eventBus)
-      );
-      const inventoryReservedListener = new InventoryReservedListener(dataSource, eventBus);
+      const orderPlacedListener = new OrderPlacedListener(dataSource);
+      const inventoryReservedListener = new InventoryReservedListener(dataSource);
 
       eventBus.subscribe('OrderPlaced', (e) => orderPlacedListener.handle(e));
       eventBus.subscribe('InventoryReserved', (e) => inventoryReservedListener.handle(e));
@@ -304,7 +290,7 @@ describe.skip('Event Flow Integration Tests', () => {
         ],
       });
 
-      const placeOrderHandler = new PlaceOrderHandler(dataSource, eventBus);
+      const placeOrderHandler = new PlaceOrderHandler(dataSource);
       const order = await placeOrderHandler.handle(orderData);
 
       await waitForEvents(200);
@@ -317,14 +303,12 @@ describe.skip('Event Flow Integration Tests', () => {
       expect(reservedBefore).toBeGreaterThan(0);
 
       // Register listener for cancellation
-      const orderCancelledListener = new OrderCancelledListener(
-        new ReleaseStockHandler(dataSource, eventBus)
-      );
+      const orderCancelledListener = new OrderCancelledListener(dataSource);
       eventBus.subscribe('OrderCancelled', (e) => orderCancelledListener.handle(e));
 
       // Cancel order
-      const cancelOrderHandler = new CancelOrderHandler(dataSource, eventBus);
-      await cancelOrderHandler.handle({ orderId: order.orderId });
+      const cancelOrderHandler = new CancelOrderHandler(dataSource);
+      await cancelOrderHandler.handle({ orderId: order.orderId, reason: 'Test cancellation' });
 
       await waitForEvents(200);
 
@@ -355,7 +339,7 @@ describe.skip('Event Flow Integration Tests', () => {
       const createProductHandler = new CreateProductHandler(dataSource);
       await createProductHandler.handle(productData);
 
-      const reserveHandler = new ReserveStockHandler(dataSource, eventBus);
+      const reserveHandler = new ReserveStockHandler(dataSource);
       
       // Create the same event twice
       const event = {
@@ -373,9 +357,10 @@ describe.skip('Event Flow Integration Tests', () => {
         version: 1,
       };
 
-      // Process event twice
-      await reserveHandler.handle(event);
-      await reserveHandler.handle(event);
+      // Process event twice with proper DTO
+      const reserveDto = { orderId: 'order-123', items: [{ sku: 'IDEMPOTENT-001', quantity: 5 }] };
+      await reserveHandler.handle(reserveDto);
+      await reserveHandler.handle(reserveDto);
 
       await waitForEvents(200);
 
@@ -402,10 +387,8 @@ describe.skip('Event Flow Integration Tests', () => {
       await createProductHandler.handle(productData);
 
       // Register all listeners
-      const orderPlacedListener = new OrderPlacedListener(
-        new ReserveStockHandler(dataSource, eventBus)
-      );
-      const inventoryReservedListener = new InventoryReservedListener(dataSource, eventBus);
+      const orderPlacedListener = new OrderPlacedListener(dataSource);
+      const inventoryReservedListener = new InventoryReservedListener(dataSource);
 
       eventBus.subscribe('OrderPlaced', (e) => orderPlacedListener.handle(e));
       eventBus.subscribe('InventoryReserved', (e) => inventoryReservedListener.handle(e));
@@ -422,7 +405,7 @@ describe.skip('Event Flow Integration Tests', () => {
         ],
       });
 
-      const placeOrderHandler = new PlaceOrderHandler(dataSource, eventBus);
+      const placeOrderHandler = new PlaceOrderHandler(dataSource);
       const order = await placeOrderHandler.handle(orderData);
 
       await waitForEvents(300);
@@ -440,9 +423,7 @@ describe.skip('Event Flow Integration Tests', () => {
     it('should allow Inventory module to react to Orders events', async () => {
       const eventsReceived: string[] = [];
 
-      const orderPlacedListener = new OrderPlacedListener(
-        new ReserveStockHandler(dataSource, eventBus)
-      );
+      const orderPlacedListener = new OrderPlacedListener(dataSource);
 
       const wrappedListener = async (event: any) => {
         eventsReceived.push('OrderPlaced');
@@ -473,7 +454,7 @@ describe.skip('Event Flow Integration Tests', () => {
     it('should allow Orders module to react to Inventory events', async () => {
       const eventsReceived: string[] = [];
 
-      const inventoryReservedListener = new InventoryReservedListener(dataSource, eventBus);
+      const inventoryReservedListener = new InventoryReservedListener(dataSource);
 
       const wrappedListener = async (event: any) => {
         eventsReceived.push('InventoryReserved');
@@ -504,9 +485,7 @@ describe.skip('Event Flow Integration Tests', () => {
     it('should allow Payments module to react to Orders events', async () => {
       const eventsReceived: string[] = [];
 
-      const orderConfirmedListener = new OrderConfirmedListener(
-        new ProcessPaymentHandler(dataSource, eventBus)
-      );
+      const orderConfirmedListener = new OrderConfirmedListener(dataSource);
 
       const wrappedListener = async (event: any) => {
         eventsReceived.push('OrderConfirmed');

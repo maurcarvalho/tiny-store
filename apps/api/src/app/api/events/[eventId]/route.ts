@@ -5,24 +5,24 @@ import { handleError } from '@/lib/error-handler';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
-    const dataSource = await getDatabase();
-    const eventStore = new EventStoreRepository(dataSource);
-    
-    const event = await eventStore.findById(params.eventId);
-    
+    const { eventId } = await params;
+    const db = await getDatabase();
+    const eventStore = new EventStoreRepository(db);
+
+    const event = await eventStore.findById(eventId);
+
     if (!event) {
       return NextResponse.json(
         { error: 'Event not found' },
         { status: 404 }
       );
     }
-    
+
     return NextResponse.json({ event });
   } catch (error) {
     return handleError(error);
   }
 }
-

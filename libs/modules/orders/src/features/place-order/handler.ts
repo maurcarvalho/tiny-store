@@ -1,12 +1,12 @@
-import { DataSource } from 'typeorm';
+import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
 import { PlaceOrderService } from './service';
 import { PlaceOrderDto, PlaceOrderResponse } from './dto';
 
 export class PlaceOrderHandler {
   private service: PlaceOrderService;
 
-  constructor(dataSource: DataSource) {
-    this.service = new PlaceOrderService(dataSource);
+  constructor(db: DrizzleDb) {
+    this.service = new PlaceOrderService(db);
   }
 
   async handle(dto: PlaceOrderDto): Promise<PlaceOrderResponse> {
