@@ -10,7 +10,8 @@
       "options": {
         "outputPath": "dist/apps/orders-service",
         "main": "apps/orders-service/src/main.ts",
-        "tsConfig": "apps/orders-service/tsconfig.json"
+        "tsConfig": "apps/orders-service/tsconfig.json",
+        "rootDir": "."
       }
     },
     "serve": {

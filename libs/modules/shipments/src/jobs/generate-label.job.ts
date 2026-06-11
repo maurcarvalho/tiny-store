@@ -42,9 +42,5 @@ async function enqueueLabelGeneration(data: LabelGenerationData): Promise<void> 
   });
 }
 
-export {
-  registerLabelGenerationWorker,
-  enqueueLabelGeneration,
-  LabelGenerationData,
-  QUEUE_NAME,
-};
+export { registerLabelGenerationWorker, enqueueLabelGeneration, QUEUE_NAME };
+export type { LabelGenerationData };

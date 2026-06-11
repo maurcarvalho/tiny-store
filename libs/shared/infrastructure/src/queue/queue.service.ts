@@ -224,4 +224,5 @@ class QueueService {
   }
 }
 
-export { QueueService, QueueAdapter, InMemoryQueueAdapter, BullMQAdapter, Job, JobOptions, WorkerHandler, QueueServiceConfig };
+export { QueueService, InMemoryQueueAdapter, BullMQAdapter };
+export type { QueueAdapter, Job, JobOptions, WorkerHandler, QueueServiceConfig };

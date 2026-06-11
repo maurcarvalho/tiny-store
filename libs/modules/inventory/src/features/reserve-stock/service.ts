@@ -1,4 +1,5 @@
 import type { DrizzleDb } from '@tiny-store/shared-infrastructure';
+import { Product } from '../../domain/entities/product';
 import { ProductRepository } from '../../domain/repositories/product.repository';
 import { StockReservationRepository } from '../../domain/repositories/stock-reservation.repository';
 import { EventBus } from '@tiny-store/shared-infrastructure';
@@ -26,7 +27,7 @@ export class ReserveStockService {
   async execute(dto: ReserveStockDto): Promise<ReserveStockResponse> {
     try {
       // Check if all products are available
-      const products = [];
+      const products: { product: Product; quantity: number }[] = [];
       for (const item of dto.items) {
         const product = await this.productRepository.findBySku(item.sku);
         
@@ -62,7 +63,7 @@ export class ReserveStockService {
       }
 
       // Reserve all stock
-      const reservations = [];
+      const reservations: { sku: string; quantity: number }[] = [];
       for (const { product, quantity } of products) {
         product.reserveStock(quantity);
         await this.productRepository.save(product);

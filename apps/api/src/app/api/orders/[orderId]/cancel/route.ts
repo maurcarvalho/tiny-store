@@ -5,16 +5,17 @@ import { handleError } from '@/lib/error-handler';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
+    const { orderId } = await params;
     const db = await getDatabase();
     const body = await request.json();
 
     const handler = new CancelOrderHandler(db);
 
     const result = await handler.handle({
-      orderId: params.orderId,
+      orderId,
       reason: body.reason || 'Customer requested cancellation',
     });
 

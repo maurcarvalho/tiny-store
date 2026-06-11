@@ -5,13 +5,14 @@ import { handleError } from '@/lib/error-handler';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sku: string } }
+  { params }: { params: Promise<{ sku: string }> }
 ) {
   try {
+    const { sku } = await params;
     const db = await getDatabase();
     const handler = new GetProductHandler(db);
 
-    const result = await handler.handle(params.sku);
+    const result = await handler.handle(sku);
 
     return NextResponse.json(result);
   } catch (error) {
@@ -21,9 +22,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { sku: string } }
+  { params }: { params: Promise<{ sku: string }> }
 ) {
   try {
+    const { sku } = await params;
     const db = await getDatabase();
     const body = await request.json();
 
@@ -36,7 +38,7 @@ export async function PATCH(
 
     const handler = new UpdateProductStockHandler(db);
     const result = await handler.handle({
-      sku: params.sku,
+      sku,
       stockQuantity: body.stockQuantity,
     });
 
